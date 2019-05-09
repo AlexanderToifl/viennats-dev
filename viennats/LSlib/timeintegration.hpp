@@ -23,6 +23,7 @@
 #include "message.h"
 
 #include "operations.hpp"
+#include "output.hpp"
 
 namespace lvlset {
 
@@ -48,12 +49,13 @@ namespace lvlset {
 
 
 
-    template <class LevelSetsType, class IntegrationSchemeType, class TimeStepRatioType, class TempRatesStopsType, class VelocityClassType, class SegmentationType>
+    template <class LevelSetsType,  class MetaDataType, class IntegrationSchemeType, class TimeStepRatioType, class TempRatesStopsType, class VelocityClassType, class SegmentationType>
     typename PointerAdapter<typename LevelSetsType::value_type>::result::value_type get_max_time_step(
             LevelSetsType& LevelSets,
             TempRatesStopsType& TempRatesStops,
             TimeStepRatioType TimeStepRatio,
             const VelocityClassType& Velocities,
+            MetaDataType& MetaData,
             const IntegrationSchemeType& IntegrationScheme,
             const SegmentationType& seg
 
@@ -101,7 +103,7 @@ namespace lvlset {
 
             value_type MaxTimeStep=std::numeric_limits<value_type>::max();
 
-            typename lvlset::IntegrationScheme<LevelSetType, VelocityClassType, IntegrationSchemeType> scheme(LevelSet, Velocities, IntegrationScheme);
+            typename lvlset::IntegrationScheme<LevelSetType, VelocityClassType, MetaDataType,IntegrationSchemeType> scheme(LevelSet, Velocities, MetaData,IntegrationScheme);
 
 
             typename LevelSetType::point_type start_v=(p==0)?LevelSet.grid().min_point_index():seg[p-1];
@@ -480,9 +482,9 @@ namespace lvlset {
 */
 
 // SFINAE (Substitution Failure Is Not An Error): If IntegrationScheme is STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE the time step is reduced depending on dissipation coefficients.
-template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType, class TimeStepType,
+template<class LevelSetType,class VelocityClassType,class MetaDataType, class IntegrationSchemeType, class TimeStepType,
          typename std::enable_if< std::is_same< lvlset::STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE, IntegrationSchemeType>::value>::type* = nullptr>
-         void reduce_timestep_hamilton_jacobi( lvlset::IntegrationScheme<LevelSetType, VelocityClassType, IntegrationSchemeType>& scheme, TimeStepType& MaxTimeStep) {
+         void reduce_timestep_hamilton_jacobi( lvlset::IntegrationScheme<LevelSetType, VelocityClassType, MetaDataType,IntegrationSchemeType>& scheme, TimeStepType& MaxTimeStep) {
 
   typedef typename LevelSetType::value_type value_type;
 
@@ -502,16 +504,17 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
 }
 
 // SFINAE (Substitution Failure Is Not An Error): IntegrationScheme != STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE
-template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType, class TimeStepType,
+template<class LevelSetType,class VelocityClassType, class MetaDataType, class IntegrationSchemeType, class TimeStepType,
          typename std::enable_if< !std::is_same< lvlset::STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE, IntegrationSchemeType>::value>::type* = nullptr>
-         void reduce_timestep_hamilton_jacobi( lvlset::IntegrationScheme<LevelSetType, VelocityClassType, IntegrationSchemeType>& scheme, TimeStepType& MaxTimeStep2) {}
+         void reduce_timestep_hamilton_jacobi( lvlset::IntegrationScheme<LevelSetType, VelocityClassType, MetaDataType,IntegrationSchemeType>& scheme, TimeStepType& MaxTimeStep2) {}
 
 
-    template <class LevelSetsType, class IntegrationSchemeType, class TimeStepRatioType, class VelocityClassType,class TimeStepType>
+    template <class LevelSetsType, class MetaDataType, class IntegrationSchemeType, class TimeStepRatioType, class VelocityClassType,class TimeStepType>
     typename PointerAdapter<typename LevelSetsType::value_type>::result::value_type time_integrate_active_grid_points2(
             LevelSetsType& LevelSets,
             TimeStepRatioType TimeStepRatio,
             const VelocityClassType& Velocities,
+            MetaDataType& Meta_Data,
             const IntegrationSchemeType& IntegrationScheme,
 //            const bool separate_materials,
             //const SegmentationType& seg,
@@ -530,7 +533,11 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
         assert(std::numeric_limits<value_type>::has_infinity);
 
 
+
         LevelSetType & LevelSet=ptr::deref(LevelSets.back());         //top level set
+
+      //  write_meta_data(LevelSet,Meta_Data,"metaB.vtp");
+
 
         typename LevelSetType::points_type seg=LevelSet.get_new_segmentation();
 
@@ -559,7 +566,7 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
             value_type MaxTimeStep=std::numeric_limits<value_type>::max();
 
             // initialise integration by passing all found velocities to the scheme class
-            typename lvlset::IntegrationScheme<LevelSetType, VelocityClassType, IntegrationSchemeType> scheme(LevelSet, Velocities, IntegrationScheme);
+            typename lvlset::IntegrationScheme<LevelSetType, VelocityClassType, MetaDataType, IntegrationSchemeType> scheme(LevelSet, Velocities, Meta_Data,IntegrationScheme);
 
             //iterators which iterate simultaneously over level sets
             std::vector<typename LevelSetType::const_iterator_runs> ITs;
@@ -657,6 +664,13 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
                 if (tmp_tmax<MaxTimeStep) MaxTimeStep=tmp_tmax;
 
             }
+
+            if(Meta_Data.output_cnt == 0){
+              write_meta_data(LevelSet,Meta_Data,"meta.vtp");
+              write_explicit_levelset(LevelSet, "out.vtp");
+              ++Meta_Data.output_cnt;
+            }
+
 
             //determine max time step
             #pragma omp critical  //execute as single thread
@@ -814,6 +828,7 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
 
     template <  class LevelSetsType,
                 class VelocitiesClass,
+                class MetaDataType,
                 class IntegrationSchemeType,
                 class CFLType,
                 class TimeType,
@@ -821,6 +836,7 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
                 class PointDataSizeType>
     TimeType time_integrate(    LevelSetsType& LevelSets,
                                 const VelocitiesClass& Velocities,
+                                MetaDataType& MetaData,
                                 const IntegrationSchemeType& integration_scheme,
                                 CFLType CFL,
                                 TimeType MaxTimeStep,
@@ -849,7 +865,13 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
         //double tmp;
 
         //tmp=-my::time::GetTime();
-        IntegrationScheme<LevelSetType, VelocitiesClass, IntegrationSchemeType>::prepare_surface_levelset(ptr::deref(LevelSets.back()));
+        IntegrationScheme<LevelSetType, VelocitiesClass, MetaDataType,IntegrationSchemeType>::prepare_surface_levelset(ptr::deref(LevelSets.back()));
+
+      //  std::cout << "Num pts = " << LevelSets.back().num_pts() << std::endl;
+
+        MetaData.reinit_alpha(ptr::deref(LevelSets.back()).num_pts()); //TODO this is only necessary for SLF
+        MetaData.reinit_calculated(ptr::deref(LevelSets.back()).num_pts()); //TODO this is only necessary for SLF
+
         //tmp+=my::time::GetTime();
         //std::cout << tmp;
 
@@ -891,6 +913,7 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
                                                 LevelSets,
                                                 CFL,
                                                 Velocities,
+                                                MetaData,
                                                 integration_scheme,
                                                 MaxTimeStep);
 
@@ -933,6 +956,7 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
     template <  class GridTraitsType,
                 class LevelSetTraitsType,
                 class VelocitiesClass,
+                class MetaDataType,
                 class IntegrationSchemeType,
                 class CFLType,
                 class TimeType,
@@ -940,6 +964,7 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
                 class PointDataSizeType>
     TimeType time_integrate(    levelset<GridTraitsType, LevelSetTraitsType>& LevelSet,
                                 const VelocitiesClass& Velocities,
+                                MetaDataType& MetaData,
                                 const IntegrationSchemeType& integration_scheme,
                                 CFLType CFL,
                                 TimeType MaxTimeStep,
@@ -968,11 +993,13 @@ template<class LevelSetType,class VelocityClassType,class IntegrationSchemeType,
 
     template <  class LevelSetsType,
                 class VelocitiesClass,
+                class MetaDataType,
                 class IntegrationSchemeType,
                 class CFLType,
                 class TimeType>
     TimeType time_integrate(    LevelSetsType& LevelSet,
                                 const VelocitiesClass& Velocities,
+                                MetaDataType& MetaData,
                                 const IntegrationSchemeType& integration_scheme,
                                 CFLType CFL,
                                 TimeType MaxTimeStep

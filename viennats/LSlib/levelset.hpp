@@ -29,5 +29,6 @@
 #include "operations.hpp"
 #include "misc.hpp"
 #include "levelset2surface.hpp"
+#include "meta_data.hpp"
 
 #endif /*LEVELSET_HPP_*/

@@ -92,100 +92,100 @@ namespace lvlset {
     }
 
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class EngquistOsherScalar;
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class EngquistOsherVector;
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class EngquistOsherSV;
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class LaxFriedrichsScalar;
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class StencilLocalLaxFriedrichsScalar;
 
 
 
-    template <class LevelSetType>
+    template <class LevelSetType,class MetaDataType>
     class SmoothingScheme;
 
 
-    template<class LevelSetType, class VelocityType, class SchemeType> class IntegrationScheme {};
+    template<class LevelSetType, class VelocityType, class MetaDataType,class SchemeType> class IntegrationScheme {};
 
 
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, ENGQUIST_OSHER_SCALAR_1ST_ORDER_TYPE>:public EngquistOsherScalar<LevelSetType, VelocityType, 1> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType,  MetaDataType,ENGQUIST_OSHER_SCALAR_1ST_ORDER_TYPE>:public EngquistOsherScalar<LevelSetType, VelocityType, MetaDataType, 1> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const ENGQUIST_OSHER_SCALAR_1ST_ORDER_TYPE& s):EngquistOsherScalar<LevelSetType, VelocityType, 1>(l,v) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata, const ENGQUIST_OSHER_SCALAR_1ST_ORDER_TYPE& s):EngquistOsherScalar<LevelSetType, VelocityType, MetaDataType,1>(l,v,mdata) {}
     };
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, ENGQUIST_OSHER_SCALAR_2ND_ORDER_TYPE>:public EngquistOsherScalar<LevelSetType, VelocityType, 2> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType,  MetaDataType,ENGQUIST_OSHER_SCALAR_2ND_ORDER_TYPE>:public EngquistOsherScalar<LevelSetType, VelocityType, MetaDataType, 2> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const ENGQUIST_OSHER_SCALAR_2ND_ORDER_TYPE& s):EngquistOsherScalar<LevelSetType, VelocityType, 2>(l,v) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v,MetaDataType& mdata, const ENGQUIST_OSHER_SCALAR_2ND_ORDER_TYPE& s):EngquistOsherScalar<LevelSetType, VelocityType, MetaDataType,2>(l,v,mdata) {}
     };
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, ENGQUIST_OSHER_VECTOR_1ST_ORDER_TYPE>:public EngquistOsherVector<LevelSetType, VelocityType, 1> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType,  MetaDataType,ENGQUIST_OSHER_VECTOR_1ST_ORDER_TYPE>:public EngquistOsherVector<LevelSetType, VelocityType, MetaDataType,1> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const ENGQUIST_OSHER_VECTOR_1ST_ORDER_TYPE& s):EngquistOsherVector<LevelSetType, VelocityType, 1>(l,v) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata, const ENGQUIST_OSHER_VECTOR_1ST_ORDER_TYPE& s):EngquistOsherVector<LevelSetType, VelocityType, MetaDataType, 1>(l,v,mdata) {}
     };
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, ENGQUIST_OSHER_VECTOR_2ND_ORDER_TYPE>:public EngquistOsherVector<LevelSetType, VelocityType, 2> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType,  MetaDataType,ENGQUIST_OSHER_VECTOR_2ND_ORDER_TYPE>:public EngquistOsherVector<LevelSetType, VelocityType,MetaDataType, 2> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const ENGQUIST_OSHER_VECTOR_2ND_ORDER_TYPE& s):EngquistOsherVector<LevelSetType, VelocityType, 2>(l,v) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v,  MetaDataType& mdata, const ENGQUIST_OSHER_VECTOR_2ND_ORDER_TYPE& s):EngquistOsherVector<LevelSetType, VelocityType, MetaDataType,2>(l,v,mdata) {}
     };
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, ENGQUIST_OSHER_SV_1ST_ORDER_TYPE>:public EngquistOsherSV<LevelSetType, VelocityType, 1> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType,  MetaDataType,ENGQUIST_OSHER_SV_1ST_ORDER_TYPE>:public EngquistOsherSV<LevelSetType, VelocityType,  MetaDataType,1> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const ENGQUIST_OSHER_SV_1ST_ORDER_TYPE& s):EngquistOsherSV<LevelSetType, VelocityType, 1>(l,v) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata,const ENGQUIST_OSHER_SV_1ST_ORDER_TYPE& s):EngquistOsherSV<LevelSetType, VelocityType, MetaDataType,1>(l,v,mdata) {}
     };
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, ENGQUIST_OSHER_SV_2ND_ORDER_TYPE>:public EngquistOsherSV<LevelSetType, VelocityType, 2> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType,  MetaDataType,ENGQUIST_OSHER_SV_2ND_ORDER_TYPE>:public EngquistOsherSV<LevelSetType, VelocityType, MetaDataType, 2> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const ENGQUIST_OSHER_SV_2ND_ORDER_TYPE& s):EngquistOsherSV<LevelSetType, VelocityType, 2>(l,v) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata, const ENGQUIST_OSHER_SV_2ND_ORDER_TYPE& s):EngquistOsherSV<LevelSetType, VelocityType,MetaDataType, 2>(l,v,mdata) {}
     };
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, LAX_FRIEDRICHS_SCALAR_1ST_ORDER_TYPE>:public LaxFriedrichsScalar<LevelSetType, VelocityType, 1> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType,  MetaDataType,LAX_FRIEDRICHS_SCALAR_1ST_ORDER_TYPE>:public LaxFriedrichsScalar<LevelSetType, VelocityType, MetaDataType, 1> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const LAX_FRIEDRICHS_SCALAR_1ST_ORDER_TYPE& s):LaxFriedrichsScalar<LevelSetType, VelocityType, 1>(l,v,s.alpha) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata, const LAX_FRIEDRICHS_SCALAR_1ST_ORDER_TYPE& s):LaxFriedrichsScalar<LevelSetType, VelocityType,MetaDataType, 1>(l,v,mdata,s.alpha) {}
     };
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, LAX_FRIEDRICHS_SCALAR_2ND_ORDER_TYPE>:public LaxFriedrichsScalar<LevelSetType, VelocityType, 2> {
+    template <class LevelSetType, class VelocityType, class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType, MetaDataType,LAX_FRIEDRICHS_SCALAR_2ND_ORDER_TYPE>:public LaxFriedrichsScalar<LevelSetType, VelocityType, MetaDataType,2> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const LAX_FRIEDRICHS_SCALAR_2ND_ORDER_TYPE& s):LaxFriedrichsScalar<LevelSetType, VelocityType, 2>(l,v,s.alpha) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata, const LAX_FRIEDRICHS_SCALAR_2ND_ORDER_TYPE& s):LaxFriedrichsScalar<LevelSetType, VelocityType, MetaDataType,2>(l,v,mdata, s.alpha) {}
     };
 
     //TODO Stencil order is given as template parameter, however in stencil local Lax Friedrichs the definitive order depends on the neighbor stencil order as well.
     //
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE>
-    :public StencilLocalLaxFriedrichsScalar<LevelSetType, VelocityType, 5> {
+    template <class LevelSetType, class VelocityType,class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType, MetaDataType, STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE>
+    :public StencilLocalLaxFriedrichsScalar<LevelSetType, VelocityType, MetaDataType,5> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE& s)
-           :StencilLocalLaxFriedrichsScalar<LevelSetType, VelocityType, 5>(l,v) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata, const STENCIL_LOCAL_LAX_FRIEDRICHS_SCALAR_TYPE& s)
+           :StencilLocalLaxFriedrichsScalar<LevelSetType, VelocityType, MetaDataType,5>(l,v,mdata) {}
     };
 
 
-    template <class LevelSetType, class VelocityType>
-    class IntegrationScheme<LevelSetType, VelocityType, SMOOTHING_SCHEME_TYPE>:public SmoothingScheme<LevelSetType> {
+    template <class LevelSetType, class VelocityType,class MetaDataType>
+    class IntegrationScheme<LevelSetType, VelocityType, MetaDataType,SMOOTHING_SCHEME_TYPE>:public SmoothingScheme<LevelSetType,MetaDataType> {
     public:
-        IntegrationScheme(LevelSetType& l, const VelocityType& v, const SMOOTHING_SCHEME_TYPE& s):SmoothingScheme<LevelSetType>(l,s.material_level, s.max_curvature, s.min_curvature) {}
+        IntegrationScheme(LevelSetType& l, const VelocityType& v, MetaDataType& mdata, const SMOOTHING_SCHEME_TYPE& s):SmoothingScheme<LevelSetType,MetaDataType>(l,mdata,s.material_level, s.max_curvature, s.min_curvature) {}
     };
 
 
 
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class EngquistOsherScalar {
 
         std::vector<typename LevelSetType::const_iterator_runs_offset> it_neighbors;       //the neighbor iterators
@@ -199,6 +199,8 @@ namespace lvlset {
 
         bool initialized;
 
+        MetaDataType& meta_data;
+
     public:
 
         static void prepare_surface_levelset(LevelSetType& l) {
@@ -210,7 +212,7 @@ namespace lvlset {
 
         }
 
-        EngquistOsherScalar(const LevelSetType& l, const VelocityType& v): LS(l), velocities(v),initialized(false) {}
+        EngquistOsherScalar(const LevelSetType& l, const VelocityType& v,MetaDataType& mdata): LS(l), velocities(v),meta_data(mdata),initialized(false) {}
 
 
         template <class IteratorType>
@@ -301,7 +303,7 @@ namespace lvlset {
 
 
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class EngquistOsherVector {
 
         std::vector<typename LevelSetType::const_iterator_runs_offset> it_neighbors;       //the neighbor iterators
@@ -315,6 +317,8 @@ namespace lvlset {
 
         bool initialized;
 
+        MetaDataType& meta_data;
+
     public:
 
         static void prepare_surface_levelset(LevelSetType& l) {
@@ -326,7 +330,7 @@ namespace lvlset {
 
         }
 
-        EngquistOsherVector(const LevelSetType& l, const VelocityType& v): LS(l), velocities(v),initialized(false) {}
+        EngquistOsherVector(const LevelSetType& l, const VelocityType& v,MetaDataType& mdata): LS(l), velocities(v),meta_data(mdata),initialized(false) {}
 
         template <class IteratorType>
         value_type operator()(const IteratorType& it, unsigned int material) {
@@ -433,7 +437,7 @@ namespace lvlset {
 
 
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType,int order>
     class EngquistOsherSV {
 
         std::vector<typename LevelSetType::const_iterator_runs_offset> it_neighbors;       //the neighbor iterators
@@ -444,6 +448,8 @@ namespace lvlset {
 
         typedef typename LevelSetType::value_type value_type;
         typedef typename LevelSetType::index_type index_type;
+
+        MetaDataType& meta_data;
 
         bool initialized;
 
@@ -457,7 +463,7 @@ namespace lvlset {
                                                         //which are necessary to calculate the derivatives are also defined
         }
 
-        EngquistOsherSV(const LevelSetType& l, const VelocityType& v): LS(l), velocities(v),initialized(false){}
+        EngquistOsherSV(const LevelSetType& l, const VelocityType& v, MetaDataType& mdata): LS(l), velocities(v),meta_data(mdata),initialized(false){}
 
 
         template <class IteratorType>
@@ -572,7 +578,7 @@ namespace lvlset {
 
 
 
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType, int order>
     class LaxFriedrichsScalar {
 
 
@@ -587,7 +593,11 @@ namespace lvlset {
 
         const double alpha;
 
+        MetaDataType& meta_data;
+
         bool initialized;
+
+
 
     public:
 
@@ -600,7 +610,7 @@ namespace lvlset {
         }
 
 
-        LaxFriedrichsScalar(const LevelSetType& l, const VelocityType& v, double a): LS(l), velocities(v), alpha(a),initialized(false) {}
+        LaxFriedrichsScalar(const LevelSetType& l, const VelocityType& v, MetaDataType& mdata, double a): LS(l), velocities(v), alpha(a),meta_data(mdata),initialized(false) {}
 
 
         template <class IteratorType>
@@ -692,7 +702,7 @@ namespace lvlset {
     };
 
     //
-    template <class LevelSetType, class VelocityType, int order>
+    template <class LevelSetType, class VelocityType, class MetaDataType, int order>
     class StencilLocalLaxFriedrichsScalar {
 
     private:
@@ -706,11 +716,15 @@ namespace lvlset {
 
         const int slf_order = 1; //stencil order
 
+        MetaDataType& meta_data;
+
         bool initialized;
 
         //Final dissipation coefficients that are used by the time integrator. If D==2 last entries are 0.
         vec<value_type,3> final_alphas;
         vec<value_type,3> dx_all;
+
+
 
 
     public:
@@ -721,6 +735,7 @@ namespace lvlset {
         return dx_all;
       }
 
+
       static void prepare_surface_levelset(LevelSetType& l) {
             assert(order > 4);
             //expand the level set function to ensure that for all active grid points the level set values of the neighbor grid points, which are necessary to calculate the derivatives are also defined
@@ -729,7 +744,7 @@ namespace lvlset {
 
         }
 
-        StencilLocalLaxFriedrichsScalar(const LevelSetType& l, const VelocityType& v): LS(l), velocities(v), initialized(false) {
+        StencilLocalLaxFriedrichsScalar(const LevelSetType& l, const VelocityType& v, MetaDataType& mdata): LS(l), velocities(v), meta_data(mdata), initialized(false) {
           for(int i = 0; i < 3; ++i){
             final_alphas[i] = 0;
             dx_all[i] = 0;
@@ -788,69 +803,81 @@ namespace lvlset {
 
 
               for(size_t i = 0; i < stars.size(); ++i){
+
+                index_type star_center_id  = stars[i].center().pt_id();
                 vec<value_type,D> alpha;
 
-                vec<value_type,D> normal_p =  stars[i].normal_vector();
 
-  	            //Check for corrupted normal
-    				    if( (math::abs(normal_p[0]) < 1e-6) && (math::abs(normal_p[1]) < 1e-6) && (math::abs(normal_p[2]) < 1e-6) ){
-  			             alphas.push_back(vec<value_type,D>(0.0));
-                     continue;
-    				    }
+                if(meta_data.calculated[star_center_id] ){
+                  alpha = meta_data.alpha[star_center_id];
+                }
+                else {
 
-                vec<value_type,D> normal_n =  normal_p;
+                  vec<value_type,D> normal_p =  stars[i].normal_vector();
 
-                vec<value_type,D> dv(value_type(0));
-                const value_type DN = 1e-4;
+    	            //Check for corrupted normal
+      				    if( (math::abs(normal_p[0]) < 1e-6) && (math::abs(normal_p[1]) < 1e-6) && (math::abs(normal_p[2]) < 1e-6) ){
+    			             alphas.push_back(vec<value_type,D>(0.0));
+                       continue;
+      				    }
 
-                for(int k=0; k < D; ++k){
+                  vec<value_type,D> normal_n =  normal_p;
 
-                    normal_p[k] -= DN; //p=previous
-                    normal_n[k] += DN; //n==next
+                  vec<value_type,D> dv(value_type(0));
+                  const value_type DN = 1e-4;
 
-                  value_type vp=velocities.calculate_normaldependent_velocity(normal_p,material);
-                  value_type vn=velocities.calculate_normaldependent_velocity(normal_n,material);
-                    //central difference
-                    dv[k] = (vn - vp) / (2.0 * DN);
+                  for(int k=0; k < D; ++k){
 
-                    normal_p[k] += DN;
-                    normal_n[k] -= DN;
+                      normal_p[k] -= DN; //p=previous
+                      normal_n[k] += DN; //n==next
+
+                    value_type vp=velocities.calculate_normaldependent_velocity(normal_p,material);
+                    value_type vn=velocities.calculate_normaldependent_velocity(normal_n,material);
+                      //central difference
+                      dv[k] = (vn - vp) / (2.0 * DN);
+
+                      normal_p[k] += DN;
+                      normal_n[k] -= DN;
+                    }
+
+                    //determine \partial H / \partial phi_l
+                    for (int k = 0 ; k < D; ++k) { //iterate over dimensions
+
+                      //Monti term
+                      value_type monti = 0;
+
+                      for(int j = 0; j < D - 1; ++j ){ //phi_p**2 + phi_q**2
+                             int idx = (k + 1 + j) % D;
+                              monti +=  stars[i].gradient(idx) * stars[i].gradient(idx);
+                      }
+                      monti  *= dv[k] / (Norm2(stars[i].gradient())); // denominator: |grad(phi)|^2
+
+
+                      //Toifl Quell term
+                      value_type toifl=0;
+
+                      for(int j= 0; j < D - 1; ++j ){
+                         int idx = (k + 1 + j) % D;
+                         toifl += stars[i].gradient(idx) * dv[idx];
+                      }
+                      toifl *= -stars[i].gradient(k) / (Norm2(stars[i].gradient())); // denominator: |grad(phi)|^2
+
+
+                      //Osher (constant V) term
+                      value_type osher=0;
+
+                      osher=velocities.calculate_normaldependent_velocity(stars[i].normal_vector(),material);
+
+
+                    //Total derivative is sum of terms given above
+                    alpha[k] = std::fabs( monti + toifl + osher);
                   }
-
-                  //determine \partial H / \partial phi_l
-                  for (int k = 0 ; k < D; ++k) { //iterate over dimensions
-
-                    //Monti term
-                    value_type monti = 0;
-
-                    for(int j = 0; j < D - 1; ++j ){ //phi_p**2 + phi_q**2
-                           int idx = (k + 1 + j) % D;
-                            monti +=  stars[i].gradient(idx) * stars[i].gradient(idx);
-                    }
-                    monti  *= dv[k] / (Norm2(stars[i].gradient())); // denominator: |grad(phi)|^2
-
-
-                    //Toifl Quell term
-                    value_type toifl=0;
-
-                    for(int j= 0; j < D - 1; ++j ){
-                       int idx = (k + 1 + j) % D;
-                       toifl += stars[i].gradient(idx) * dv[idx];
-                    }
-                    toifl *= -stars[i].gradient(k) / (Norm2(stars[i].gradient())); // denominator: |grad(phi)|^2
-
-
-                    //Osher (constant V) term
-                    value_type osher=0;
-
-                    osher=velocities.calculate_normaldependent_velocity(stars[i].normal_vector(),material);
-
-
-                  //Total derivative is sum of terms given above
-                  alpha[k] = std::fabs( monti + toifl + osher);
                 }
 
                 alphas.push_back(alpha);
+
+                meta_data.alpha[star_center_id] = alpha;
+                meta_data.calculated[star_center_id] = true;
               }
 
 
@@ -885,13 +912,14 @@ namespace lvlset {
     };
 
 
-    template <class LevelSetType>
+    template <class LevelSetType,class MetaDataType>
     class SmoothingScheme {
 
         std::vector<typename LevelSetType::const_iterator_runs_offset> it_neighbors;       //the neighbor iterators
 
         const LevelSetType & LS;
 
+        MetaDataType& meta_data;
 
         typedef typename LevelSetType::value_type value_type;
         typedef typename LevelSetType::index_type index_type;
@@ -907,7 +935,7 @@ namespace lvlset {
 
     public:
 
-        SmoothingScheme(LevelSetType& l, int mat, double max, double min): LS(l), material_level(mat), max_curvature(max), min_curvature(min),initialized(false) {}
+        SmoothingScheme(LevelSetType& l, MetaDataType& mdata, int mat, double max, double min): LS(l),  meta_data(mdata), material_level(mat),max_curvature(max), min_curvature(min),initialized(false) {}
 
         static void prepare_surface_levelset(LevelSetType& l) {
 

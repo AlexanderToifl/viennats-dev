@@ -1005,7 +1005,7 @@ namespace proc {
         msg::print_message("Start loop over time");
 #endif
 
-
+  lvlset::MetaData<ParameterType::Dimension> mdata;
     while(true) {
 //                        std::vector<double>& Coverages_temp = Coverages;
 
@@ -1062,6 +1062,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                                 LevelSets,
                                 dummy,
+                                mdata,
                                 lvlset::SMOOTHING_SCHEME(ProcessParameter.smoothing_material_level, ProcessParameter.smoothing_max_curvature, ProcessParameter.smoothing_min_curvature),
                                 Parameter.cfl_condition,
                                 std::numeric_limits<double>::max(),
@@ -1356,6 +1357,7 @@ namespace proc {
                         time_step=lvlset::time_integrate(
                             LevelSets_temp,
                             Velocities,
+                            mdata,
                             lvlset::ENGQUIST_OSHER_SV_1ST_ORDER,
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -1383,6 +1385,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::ENGQUIST_OSHER_SV_2ND_ORDER,
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -1403,6 +1406,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::LAX_FRIEDRICHS_SCALAR_1ST_ORDER(ProcessParameter.LaxFriedrichsDissipationCoefficient),
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -1423,6 +1427,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::LAX_FRIEDRICHS_SCALAR_2ND_ORDER(ProcessParameter.LaxFriedrichsDissipationCoefficient),
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -1597,6 +1602,8 @@ namespace proc {
         msg::print_message("Start loop over time");
 #endif
 
+    lvlset::MetaData<ParameterType::Dimension> mdata;
+
 
     //Prepare top layer for depo (if Model is not SelectiveDeposition, function is empty.)
     constexpr bool is_selective_depo  =  std::is_same<model::SelectiveDeposition, ModelType>::value;
@@ -1667,6 +1674,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                                 LevelSets,
                                 dummy,
+                                mdata,
                                 lvlset::SMOOTHING_SCHEME(ProcessParameter.smoothing_material_level, ProcessParameter.smoothing_max_curvature, ProcessParameter.smoothing_min_curvature),
                                 Parameter.cfl_condition,
                                 std::numeric_limits<double>::max(),
@@ -2007,6 +2015,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::ENGQUIST_OSHER_SV_1ST_ORDER,
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -2028,6 +2037,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::ENGQUIST_OSHER_SV_2ND_ORDER,
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -2048,6 +2058,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::LAX_FRIEDRICHS_SCALAR_1ST_ORDER(ProcessParameter.LaxFriedrichsDissipationCoefficient),
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -2068,6 +2079,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::LAX_FRIEDRICHS_SCALAR_2ND_ORDER(ProcessParameter.LaxFriedrichsDissipationCoefficient),
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -2097,6 +2109,7 @@ namespace proc {
                     time_step=lvlset::time_integrate(
                             LevelSets,
                             Velocities,
+                            mdata,
                             lvlset::STENCIL_LOCAL_LAX_FRIEDRICHS(),
                             Parameter.cfl_condition,
                             MaxTimeStep,
@@ -2109,6 +2122,7 @@ namespace proc {
                       time_step=lvlset::time_integrate(
                               LevelSets,
                               Velocities,
+                              mdata,
                               lvlset::STENCIL_LOCAL_LAX_FRIEDRICHS(),
                               Parameter.cfl_condition,
                               MaxTimeStep,
@@ -2140,6 +2154,7 @@ namespace proc {
                          time_step=lvlset::time_integrate(
                                   LevelSets,
                                   Velocities,
+                                  mdata,
                                   lvlset::STENCIL_LOCAL_LAX_FRIEDRICHS(),
                                   Parameter.cfl_condition,
                                   MaxTimeStep,
