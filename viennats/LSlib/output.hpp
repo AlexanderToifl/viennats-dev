@@ -349,8 +349,9 @@ namespace lvlset {
       pWriter->Write();
     }
 
+    //TODO atm meta data output is specific for SLF
     template <class LevelSetType,class MetaDataType>
-    void write_meta_data(const LevelSetType& l, MetaDataType& mdata, const std::string& filename){
+    void write_expanded_pts_meta_data(const LevelSetType& l, MetaDataType& mdata, const std::string& filename){
 
       const int D=LevelSetType::dimensions;
       const double gridDelta = l.grid().grid_delta();
@@ -362,19 +363,17 @@ namespace lvlset {
       vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
       vtkSmartPointer<vtkPoints> polyPoints = vtkSmartPointer<vtkPoints>::New();
       vtkSmartPointer<vtkCellArray> polyCells = vtkSmartPointer<vtkCellArray>::New();
-      //vtkSmartPointer<vtkFloatArray> polyValues = vtkSmartPointer<vtkFloatArray>::New();
+
       vtkSmartPointer<vtkFloatArray> polyAlpha = vtkSmartPointer<vtkFloatArray>::New();
     //  vtkSmartPointer<vtkFloatArray> polyAlphaY = vtkSmartPointer<vtkFloatArray>::New();
     //  vtkSmartPointer<vtkFloatArray> polyAlphaZ = vtkSmartPointer<vtkFloatArray>::New();
 
-    //  polyValues->SetNumberOfComponents(1);
-    //  polyValues->SetName("LSValues");
 
       polyAlpha->SetNumberOfComponents(3);
       polyAlpha->SetName("Alpha");
 
 
-      for(unsigned point_idx = 0; point_idx < mdata.alpha.size(); ++point_idx){
+      for(unsigned point_idx = 0; point_idx < mdata.expanded_pt_data.vec_values.size(); ++point_idx){
         vec<int, D> coords = static_cast< vec<int,D> >(l.find_coordinate_of_pt(point_idx));
 
         double p[3];
@@ -387,17 +386,68 @@ namespace lvlset {
         double tmp[3] = {0.,0.,0.};
 
         for(int i = 0; i < D; ++i ){
-          tmp[i] = mdata.alpha[point_idx][i];
+          tmp[i] = mdata.expanded_pt_data.vec_values[point_idx][i];
         }
+
+    //    std::cout << coords << ", " << mdata.expanded_pt_data.vec_values[point_idx] << std::endl;
         polyAlpha->InsertNextTuple(tmp);
 
       }
 
 
-
       polyData->SetPoints(polyPoints);
       polyData->SetVerts(polyCells);
       polyData->GetPointData()->SetNormals(polyAlpha);
+      // polyData->GetPointData()->SetScalars(polyAlphaY);
+      // polyData->GetPointData()->SetScalars(polyAlphaZ);
+
+      vtkSmartPointer<vtkXMLPolyDataWriter> pWriter = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+      pWriter->SetFileName(filename.c_str());
+      pWriter->SetInputData(polyData);
+      pWriter->Write();
+    }
+
+
+    //TODO atm meta data output is specific for SLF
+    template <class LevelSetType,class MetaDataType>
+    void write_active_pts_meta_data(const LevelSetType& l, MetaDataType& mdata, const std::string& filename){
+
+      const int D=LevelSetType::dimensions;
+      const double gridDelta = l.grid().grid_delta();
+
+      // set up iterator and initialise storage
+      //typename LevelSetType::template const_iterator_neighbor_filtered<typename LevelSetType::filter_value,  1> itA(l, typename LevelSetType::filter_value(2.0));
+    //  std::vector< vec<typename LevelSetType::value_type, D> > normals;
+
+      vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+      vtkSmartPointer<vtkPoints> polyPoints = vtkSmartPointer<vtkPoints>::New();
+      vtkSmartPointer<vtkCellArray> polyCells = vtkSmartPointer<vtkCellArray>::New();
+
+      vtkSmartPointer<vtkFloatArray> polyValues = vtkSmartPointer<vtkFloatArray>::New();
+    //  vtkSmartPointer<vtkFloatArray> polyAlphaY = vtkSmartPointer<vtkFloatArray>::New();
+    //  vtkSmartPointer<vtkFloatArray> polyAlphaZ = vtkSmartPointer<vtkFloatArray>::New();
+
+
+      polyValues->SetNumberOfComponents(1);
+      polyValues->SetName("Dissipation");
+
+
+      for(unsigned point_idx = 0; point_idx < mdata.active_pt_data.scalar_values.size(); ++point_idx){
+        vec<int, D> coords = static_cast< vec<int,D> >(l.find_coordinate_of_pt(point_idx));
+
+        double p[3];
+        for(unsigned i=0; i<D; ++i) p[i] = gridDelta*coords[i];
+
+        vtkIdType pointId = polyPoints->InsertNextPoint(p);
+        polyCells->InsertNextCell(1, &pointId); // insert vertex for visualisation
+
+        polyValues->InsertNextValue( mdata.active_pt_data.scalar_values[point_idx]);
+
+      }
+
+      polyData->SetPoints(polyPoints);
+      polyData->SetVerts(polyCells);
+      polyData->GetPointData()->SetScalars(polyValues);
       // polyData->GetPointData()->SetScalars(polyAlphaY);
       // polyData->GetPointData()->SetScalars(polyAlphaZ);
 

@@ -20,35 +20,53 @@
 
 namespace lvlset {
 
-template<int D>
+
+  template<int D>
+  class ExpandedPointsData{
+    public:
+      std::vector< vec<double,D> > vec_values;
+      std::deque<bool> flags; //NOTE vector<bool> is not used here, because it is not a STL container
+
+      void reinit(int n){
+        vec_values.resize(n);
+
+        //fill all vectors with 0 entries
+        for(unsigned values_idx = 0; values_idx < vec_values.size(); ++values_idx){
+          for(int i = 0; i < D; ++i)
+            vec_values[values_idx][i] = 0.0;
+        }
+
+        flags.resize(n);
+
+        for(unsigned i = 0; i < flags.size(); ++i){
+            flags[i] = false;
+        }
+      }
+  };
+
+  template<int D>
+  class ActivePointsData{
+    public:
+      std::vector<double > scalar_values;
+
+      void reinit(int n){
+        scalar_values.resize(n);
+
+        for(unsigned i = 0; i < scalar_values.size(); ++i){
+            scalar_values[i] = 0.0;
+        }
+      }
+  };
+
+  template<int D>
   class MetaData{
+    public:
+      ExpandedPointsData<D> expanded_pt_data;
+      ActivePointsData<D> active_pt_data;
+      unsigned output_cnt;
 
-  public:
-    std::vector< vec<double,D> > alpha;
-    std::deque<bool> calculated; //NOTE vector<bool> is not used here, because it is not a STL container
 
-    unsigned output_cnt;
-
-    //TODO More elegant solution; maybe use generic static function
-    void reinit_alpha(int n){
-      alpha.resize(n);
-
-      //fill all vectors with 0 entries
-      for(unsigned alpha_idx = 0; alpha_idx < alpha.size(); ++alpha_idx){
-        for(int i = 0; i < D; ++i)
-          alpha[alpha_idx][i] = 0.0;
-      }
-    }
-
-    void reinit_calculated(int n){
-      calculated.resize(n);
-
-      for(unsigned i = 0; i < calculated.size(); ++i){
-          calculated[i] = false;
-      }
-    }
-
-    MetaData():output_cnt(0){}
+      MetaData():output_cnt(0){}
 
   };
 }

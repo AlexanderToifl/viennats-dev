@@ -25,6 +25,8 @@
 #include "operations.hpp"
 #include "output.hpp"
 
+#define META_DATA_OUTPUT 1
+
 namespace lvlset {
 
     using namespace math;
@@ -665,11 +667,26 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
 
             }
 
-            if(Meta_Data.output_cnt == 0){
-              write_meta_data(LevelSet,Meta_Data,"meta.vtp");
-              write_explicit_levelset(LevelSet, "out.vtp");
+            #if META_DATA_OUTPUT
+
+              const int output_period = 100;
+
+              if ( (Meta_Data.output_cnt / output_period) == 0){
+                std::ostringstream oss;
+                oss << "meta_extended_" << Meta_Data.output_cnt << ".vtp";
+                write_expanded_pts_meta_data(LevelSet,Meta_Data, oss.str());
+
+                oss.str(std::string());//clear oss
+                oss <<"meta_active_" << Meta_Data.output_cnt << ".vtp";
+                write_active_pts_meta_data(LevelSet, Meta_Data, oss.str());
+
+                oss.str(std::string());//clear oss
+                oss << "LS_explicit_" << Meta_Data.output_cnt << ".vtp";
+                write_explicit_levelset(LevelSet, oss.str());
+              }
+
               ++Meta_Data.output_cnt;
-            }
+            #endif
 
 
             //determine max time step
@@ -869,8 +886,8 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
 
       //  std::cout << "Num pts = " << LevelSets.back().num_pts() << std::endl;
 
-        MetaData.reinit_alpha(ptr::deref(LevelSets.back()).num_pts()); //TODO this is only necessary for SLF
-        MetaData.reinit_calculated(ptr::deref(LevelSets.back()).num_pts()); //TODO this is only necessary for SLF
+        MetaData.expanded_pt_data.reinit(ptr::deref(LevelSets.back()).num_pts()); //TODO this is atm only necessary for SLF
+        MetaData.active_pt_data.reinit(ptr::deref(LevelSets.back()).num_active_pts());//TODO this is atm only necessary for SLF
 
         //tmp+=my::time::GetTime();
         //std::cout << tmp;

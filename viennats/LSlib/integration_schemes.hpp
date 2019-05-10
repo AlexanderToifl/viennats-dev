@@ -807,9 +807,9 @@ namespace lvlset {
                 index_type star_center_id  = stars[i].center().pt_id();
                 vec<value_type,D> alpha;
 
-
-                if(meta_data.calculated[star_center_id] ){
-                  alpha = meta_data.alpha[star_center_id];
+                //only calculate alphas if they have not been calculated previously
+                if(meta_data.expanded_pt_data.flags[star_center_id] ){
+                  alpha = meta_data.expanded_pt_data.vec_values[star_center_id];
                 }
                 else {
 
@@ -876,8 +876,8 @@ namespace lvlset {
 
                 alphas.push_back(alpha);
 
-                meta_data.alpha[star_center_id] = alpha;
-                meta_data.calculated[star_center_id] = true;
+                meta_data.expanded_pt_data.vec_values[star_center_id] = alpha;
+                meta_data.expanded_pt_data.flags[star_center_id] = true;
               }
 
 
@@ -905,6 +905,8 @@ namespace lvlset {
             }
 
             if(DEBUG) std::cout << "H-D = " << hamiltonian - dissipation << std::endl;
+
+            meta_data.active_pt_data.scalar_values[it.active_pt_id()] = dissipation;
 
             return hamiltonian - dissipation;
           }
