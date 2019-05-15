@@ -671,9 +671,9 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
 
               const int output_period = 100;
 
-              if ( (Meta_Data.output_cnt / output_period) == 0){
+              if ( (Meta_Data.output_cnt % output_period) == 0){
                 std::ostringstream oss;
-                oss << "meta_extended_" << Meta_Data.output_cnt << ".vtp";
+                oss << "meta_expanded_" << Meta_Data.output_cnt << ".vtp";
                 write_expanded_pts_meta_data(LevelSet,Meta_Data, oss.str());
 
                 oss.str(std::string());//clear oss
@@ -686,6 +686,7 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
               }
 
               ++Meta_Data.output_cnt;
+
             #endif
 
 

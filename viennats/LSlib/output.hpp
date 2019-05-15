@@ -374,23 +374,25 @@ namespace lvlset {
 
 
       for(unsigned point_idx = 0; point_idx < mdata.expanded_pt_data.vec_values.size(); ++point_idx){
-        vec<int, D> coords = static_cast< vec<int,D> >(l.find_coordinate_of_pt(point_idx));
+        if(mdata.expanded_pt_data.flags[point_idx]){ //only write value if it has been calculated
+          vec<int, D> coords = static_cast< vec<int,D> >(l.find_coordinate_of_pt(point_idx));
 
-        double p[3];
-        for(unsigned i=0; i<D; ++i) p[i] = gridDelta*coords[i];
+          double p[3];
+          for(unsigned i=0; i<D; ++i) p[i] = gridDelta*coords[i];
 
 
-        vtkIdType pointId = polyPoints->InsertNextPoint(p);
-        polyCells->InsertNextCell(1, &pointId); // insert vertex for visualisation
+          vtkIdType pointId = polyPoints->InsertNextPoint(p);
+          polyCells->InsertNextCell(1, &pointId); // insert vertex for visualisation
 
-        double tmp[3] = {0.,0.,0.};
+          double tmp[3] = {0.,0.,0.};
 
-        for(int i = 0; i < D; ++i ){
-          tmp[i] = mdata.expanded_pt_data.vec_values[point_idx][i];
+          for(int i = 0; i < D; ++i ){
+            tmp[i] = mdata.expanded_pt_data.vec_values[point_idx][i];
+          }
+
+      //    std::cout << coords << ", " << mdata.expanded_pt_data.vec_values[point_idx] << std::endl;
+          polyAlpha->InsertNextTuple(tmp);
         }
-
-    //    std::cout << coords << ", " << mdata.expanded_pt_data.vec_values[point_idx] << std::endl;
-        polyAlpha->InsertNextTuple(tmp);
 
       }
 
@@ -416,13 +418,13 @@ namespace lvlset {
       const double gridDelta = l.grid().grid_delta();
 
       // set up iterator and initialise storage
-      //typename LevelSetType::template const_iterator_neighbor_filtered<typename LevelSetType::filter_value,  1> itA(l, typename LevelSetType::filter_value(2.0));
-    //  std::vector< vec<typename LevelSetType::value_type, D> > normals;
+      typename LevelSetType::template const_iterator_neighbor_filtered<typename LevelSetType::filter_value,  1> itA(l, typename LevelSetType::filter_value(0.5));
 
       vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
       vtkSmartPointer<vtkPoints> polyPoints = vtkSmartPointer<vtkPoints>::New();
       vtkSmartPointer<vtkCellArray> polyCells = vtkSmartPointer<vtkCellArray>::New();
 
+      vtkSmartPointer<vtkFloatArray> polyValues = vtkSmartPointer<vtkFloatArray>::New();
       vtkSmartPointer<vtkFloatArray> polyValues = vtkSmartPointer<vtkFloatArray>::New();
     //  vtkSmartPointer<vtkFloatArray> polyAlphaY = vtkSmartPointer<vtkFloatArray>::New();
     //  vtkSmartPointer<vtkFloatArray> polyAlphaZ = vtkSmartPointer<vtkFloatArray>::New();
@@ -432,16 +434,21 @@ namespace lvlset {
       polyValues->SetName("Dissipation");
 
 
-      for(unsigned point_idx = 0; point_idx < mdata.active_pt_data.scalar_values.size(); ++point_idx){
-        vec<int, D> coords = static_cast< vec<int,D> >(l.find_coordinate_of_pt(point_idx));
 
-        double p[3];
-        for(unsigned i=0; i<D; ++i) p[i] = gridDelta*coords[i];
+      while(!itA.is_finished()){
+        if(itA.center().is_active()){
 
-        vtkIdType pointId = polyPoints->InsertNextPoint(p);
-        polyCells->InsertNextCell(1, &pointId); // insert vertex for visualisation
+          double p[3];
+          for(unsigned i=0; i<D; ++i) p[i] = gridDelta*itA.indices(i);
 
-        polyValues->InsertNextValue( mdata.active_pt_data.scalar_values[point_idx]);
+          vtkIdType pointId = polyPoints->InsertNextPoint(p);
+          polyCells->InsertNextCell(1, &pointId); // insert vertex for visualisation
+
+          polyValues->InsertNextValue( mdata.active_pt_data.scalar_values[itA.center().active_pt_id()]);
+
+        }
+
+        itA.next();
 
       }
 
