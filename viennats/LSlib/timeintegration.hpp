@@ -25,7 +25,7 @@
 #include "operations.hpp"
 #include "output.hpp"
 
-#define META_DATA_OUTPUT 1
+#define META_DATA_OUTPUT 0
 
 namespace lvlset {
 
@@ -706,6 +706,8 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
                    #endif
                    MaxTimeStep2=MaxTimeStep;
                 }
+
+
             }
             #pragma omp barrier //wait until all other threads in section reach the same point.
             #pragma omp single //section of code that must be run by a single available thread.
@@ -727,10 +729,12 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
             // iterator over all velocities in TempStopRates to apply them
             typename std::vector<std::pair<value_type, value_type> >::const_iterator itRS=TempRatesStops.begin();
 
+          //  std::cout << "dt=" << MaxTimeStep2 << "\n";
             // iterate over all points in the segmentation of new topmost levelset
             for (size_type local_pt_id=0;local_pt_id<LevelSet.num_pts(p);++local_pt_id) {
                 // phi is the LS value at the current grid point
                 value_type Phi=LevelSet.value(p, local_pt_id);
+
 
                 TimeStepType t=MaxTimeStep2;  // maximum time step we can take
 

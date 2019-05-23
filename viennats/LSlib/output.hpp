@@ -425,7 +425,6 @@ namespace lvlset {
       vtkSmartPointer<vtkCellArray> polyCells = vtkSmartPointer<vtkCellArray>::New();
 
       vtkSmartPointer<vtkFloatArray> polyValues = vtkSmartPointer<vtkFloatArray>::New();
-      vtkSmartPointer<vtkFloatArray> polyValues = vtkSmartPointer<vtkFloatArray>::New();
     //  vtkSmartPointer<vtkFloatArray> polyAlphaY = vtkSmartPointer<vtkFloatArray>::New();
     //  vtkSmartPointer<vtkFloatArray> polyAlphaZ = vtkSmartPointer<vtkFloatArray>::New();
 

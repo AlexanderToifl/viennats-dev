@@ -824,7 +824,7 @@ namespace lvlset {
                   vec<value_type,D> normal_n =  normal_p;
 
                   vec<value_type,D> dv(value_type(0));
-                  const value_type DN = 1e-4;
+                  const value_type DN = std::cbrt(std::numeric_limits<value_type>::epsilon())*v;
 
                   for(int k=0; k < D; ++k){
 
@@ -906,7 +906,7 @@ namespace lvlset {
 
             if(DEBUG) std::cout << "H-D = " << hamiltonian - dissipation << std::endl;
 
-            meta_data.active_pt_data.scalar_values[it.active_pt_id()] = dissipation;
+            meta_data.active_pt_data.scalar_values[it.active_pt_id()] = hamiltonian;
 
             return hamiltonian - dissipation;
           }
