@@ -593,6 +593,12 @@ namespace proc {
 
     LevelSetType tmp2 = lvlset::invert(tmp);
     LevelSets.back().swap(tmp2);
+
+    // LevelSetType tmp3 = lvlset::max(tmp2,lvlset::invert(*LevelSets.begin()));
+
+    // write_explicit_surface_vtk(tmp2,"top.vtk");
+    // write_explicit_surface_vtk(tmp3,"top2.vtk");
+    // write_explicit_surface_vtk( lvlset::max(*it_layer,lvlset::invert(*it_maskLayer)));
   }
 
 // SFINAE (Substitution Failure Is Not An Error):  model != SelectiveDeposition

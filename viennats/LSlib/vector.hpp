@@ -255,6 +255,36 @@ namespace lvlset {
         return v*d;
     }
 
+    //Reflection in plane given by normal vector
+    template <class T> inline vec<T,3> ReflectionInPlane(const vec<T,3>& v, const vec<T,3>& normal) {
+        vec<T,3> n = Normalize(normal);
+
+        vec<T,3> res{0,0,0};
+        res[0] =  (1-2*n[0]*n[0])*v[0]   + (-2*n[0]*n[1]*v[1])   +    (-2*n[0]*n[2])*v[2];
+        res[1] =  (-2*n[0]*n[1])*v[0]    + (1-2*n[1]*n[1])*v[1]  +    (-2*n[1]*n[2])*v[2];
+        res[2] =  (-2*n[0]*n[2])*v[0]    + (-2*n[1]*n[2])*v[1]   +    (1-2*n[2]*n[2])*v[2];
+
+        return res;
+
+    }
+
+    //Rotation around axis given by vector axis with a certain angle
+    // https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+    template <class T> inline vec<T,3> RotateAroundAxis(const vec<T,3>& v, const vec<T,3>& axis, T angle) {
+
+        vec<T,3> ax = Normalize(axis);
+
+        T cosA = cos(angle);
+        T sinA = sin(angle);
+
+        vec<T,3> res{0,0,0};
+        res[0] = (cosA + ax[0]*ax[0]*(1-cosA))*v[0]     + (ax[0]*ax[1]*(1-cosA)-ax[2]*sinA)*v[1] + (ax[0]*ax[2]*(1-cosA)+ax[1]*sinA)*v[2];
+        res[1] = (ax[1]*ax[0]*(1-cosA)+ax[2]*sinA)*v[0] + (cosA + ax[1]*ax[1]*(1-cosA))*v[1]     + (ax[1]*ax[2]*(1-cosA)-ax[0]*sinA)*v[2];
+        res[2] = (ax[2]*ax[0]*(1-cosA)-ax[1]*sinA)*v[0] + (ax[2]*ax[1]*(1-cosA)+ax[0]*sinA)*v[1] + (cosA + ax[2]*ax[2]*(1-cosA))*v[2];
+
+        return res;
+    }
+
     template <class T> inline vec<T,2> RotateLeft(const vec<T,2>& v) {
         return vec<T,2>(-v[1],v[0]);
     }

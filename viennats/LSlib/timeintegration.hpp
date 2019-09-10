@@ -688,30 +688,33 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
               ++Meta_Data.output_cnt;
 
             #endif
-
-
             //determine max time step
             #pragma omp critical  //execute as single thread
             {
+
                 if (MaxTimeStep<MaxTimeStep2) MaxTimeStep2=MaxTimeStep;
 
+                //std::cout << MaxTimeStep2 << " -> ";
                 //If scheme is STENCIL_LOCAL_LAX_FRIEDRICHS the time step is reduced depending on the dissipation coefficients
                 //For all remaining schemes this function is empty.
-                reduce_timestep_hamilton_jacobi(scheme, MaxTimeStep);
+                  //for hausdorff script: following line must remain in line 701
+if(1)
+                 reduce_timestep_hamilton_jacobi(scheme, MaxTimeStep);
+
 
                 if (MaxTimeStep<MaxTimeStep2){
+
                    #ifdef VERBOSE
                     std::cout << "HJ: Reduced time step from " << MaxTimeStep2;
                     std::cout << " to " << MaxTimeStep << std::endl;
                    #endif
                    MaxTimeStep2=MaxTimeStep;
                 }
-
-
             }
             #pragma omp barrier //wait until all other threads in section reach the same point.
             #pragma omp single //section of code that must be run by a single available thread.
             {
+
 
 
 
@@ -720,16 +723,15 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
                 assert(new_lvlset.num_pts()==new_lvlset.num_active_pts());
                 LevelSet.swap(new_lvlset);
             }
-
             /*
                 This is where the magic happens
                 Here the velocites are applied to the LS values
             */
-
             // iterator over all velocities in TempStopRates to apply them
             typename std::vector<std::pair<value_type, value_type> >::const_iterator itRS=TempRatesStops.begin();
-
-          //  std::cout << "dt=" << MaxTimeStep2 << "\n";
+            //for hausdorff script: following line must remain in line 733
+if(0)
+              std::cout << "dt=" << MaxTimeStep2 << "\n";
             // iterate over all points in the segmentation of new topmost levelset
             for (size_type local_pt_id=0;local_pt_id<LevelSet.num_pts(p);++local_pt_id) {
                 // phi is the LS value at the current grid point
@@ -766,6 +768,7 @@ template<class LevelSetType,class VelocityClassType, class MetaDataType, class I
 
         }
 
+        //std::cout << MaxTimeStep2 << "\n";
         return MaxTimeStep2;
 
     }

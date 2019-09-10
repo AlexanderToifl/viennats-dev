@@ -15,6 +15,8 @@
 
 
 #include <cmath>
+#include <array>
+
 
 //at for fourRateInterpolation()
 #include "LSlib/levelset.hpp"
@@ -64,6 +66,8 @@ namespace my {
 
     template <int D> void DetermineCoefficientsForImplicitRayTracing(const double* Position, const double* Direction, const double* Rho, double* Coefficients );
     template <int D> void CalculateNormal(double* n, const double* v, const double* A);
+
+    template<class T>  bool isEqual(T x, T y, T eps);
 
     /*template <int D, template <class, int> class V > inline V<int,D> round(const V<double,D>& vd) {
             V<int,D> vi;
@@ -236,6 +240,11 @@ int my::math::SolveLinear(double c[2],double s[1]) {
     s[0]=-c[0]/c[1];
     return 1;
   }
+}
+
+template<class T> inline
+bool  my::math::isEqual(T x, T y, T eps){
+    return std::fabs(x-y) <= eps;
 }
 
 
@@ -916,11 +925,247 @@ namespace my {
       }
     }
 
+
+
+    //returns spherical vector [r,theta,phi], with theta: elevation, phi: azimuth
+    template<class T> inline
+    lvlset::vec<T,3> cartesianToSpherical(const lvlset::vec<T,3>& cart){
+      T r = Norm(cart);
+
+      T theta = acos(cart[2]/r);
+      T phi = atan2(cart[1],cart[0]);
+      if(phi < 0)
+        phi += 2*math::Pi;
+
+      return lvlset::vec<T,3>{r,theta,phi};
+    }
+
+    //takes spherical vector [r,theta,phi], with theta: elevation, phi: azimuth
+    template<class T> inline
+    lvlset::vec<T,3> sphericalToCartesian(const lvlset::vec<T,3>& sph){
+
+      return lvlset::vec<T,3>{    sph[0]*sin(sph[1])*cos(sph[2]),
+                                  sph[0]*sin(sph[1])*sin(sph[2]),
+                                  sph[0]*cos(sph[1])};
+    }
+
+
+
+    //check if a point is on spherical triangle that is located on a unit sphere.
+    //The triangle is given by its vertices (cartesian coordinates).
+    template<class T>
+    bool isOnSphericalTriangle(const lvlset::vec<T,3>& point,
+                               const lvlset::vec<T,3>& vertex1,
+                               const lvlset::vec<T,3>& vertex2,
+                               const lvlset::vec<T,3>& vertex3){
+
+          const T eps=1e-12;
+          T distances[3] = {0, 0, 0};
+          const lvlset::vec<T,3> vertices[3] = {vertex1,vertex2, vertex3};
+
+          //distance = v cdot (pi x p(i+1)) for the triangle vertices pi and point v.
+          //If point v is on the same side of all 3 planes defined by (0, pi, p(i+1)),
+          //then it is on the spherical triangle.
+
+          //Distance loop
+          for(int j = 0 ; j < 3; ++j){
+               //Cross product loop
+               for(int i = 0 ; i < 3; ++i){
+                   distances[j] += vertices[(0+j)%3][(1+i)%3]*vertices[(1+j)%3][(2+i)%3]*point[(0+i)%3] -
+                                   vertices[(0+j)%3][(2+i)%3]*vertices[(1+j)%3][(1+i)%3]*point[(0+i)%3];
+               }
+          }
+
+         // if(isEqual(point(0),point(1),1e-12))
+       //    std::cout << "isOnSphericalTriangle: point:" << point << ", distances: " << distances[0] << ", " << distances[1] << ", " << distances[2] << std::endl;
+
+
+          if ( (distances[0] >= 0 || isEqual(distances[0],0.0,eps)) &&
+               (distances[1] >= 0 || isEqual(distances[1],0.0,eps)) &&
+               (distances[2] >= 0 || isEqual(distances[2],0.0,eps))){
+              return true;
+          }
+
+          return false;
+     }
+
+
+    template<class T>
+    lvlset::vec<T,3> sphericalBarycentricCoords(const lvlset::vec<T,3>& v, const lvlset::vec<T,3>& v1, const lvlset::vec<T,3>& v2, const lvlset::vec<T,3>& v3 ){
+
+       lvlset::vec<T,3> normals[3]{cross(v2,v3), cross(v3,v1), cross(v1,v2)};
+       lvlset::vec<T,3> sin_al;
+
+       for(size_t i = 0; i < 3; ++i)
+          sin_al[i] = dot(v,normals[i]);
+
+       lvlset::vec<T,3> sin_be{dot(v1,normals[0]), dot(v2,normals[1]), dot(v3,normals[2]) };
+
+       lvlset::vec<T,3> result;
+       for(size_t i = 0; i < 3; ++i)
+          result[i] = sin_al[i] / sin_be[i];
+
+       return result;
+     }
+
+
+  }
+
+  namespace symmetry {
+
+    //c-axis orientation and a1 direction orientation can be given, a2 and a3 are rotated by 120 deg around in c-axis
+    //Default values lead to following setup:
+    //x-axis: [1 0 -1 0]
+    //y-axis: [-1 2 -1 0]
+    //z-axis: [0 0 0 1]
+    template<class T>
+    //lvlset::vec<T,3> millerBravaisToCartesian(const std::array<T,4>& hex, lvlset::vec<T,3>& a1 = {sqrt(3)*0.5, -0.5, 0}, lvlset::vec<T,3>& c = {0, 0, 1} ){
+    lvlset::vec<T,3> millerBravaisToCartesian(const std::array<T,4>& hex, const lvlset::vec<T,3>& a1, const lvlset::vec<T,3>& c){
+
+      lvlset::vec<T,3> a2, a3;
+
+      assert(std::fabs(hex[0] + hex[1] + hex[2]) > 1e-4);
+
+      a2 = lvlset::RotateAroundAxis(a1, c, 2.0 * math::Pi/3);
+      a3 = lvlset::RotateAroundAxis(a1, c, 4.0 * math::Pi/3);
+
+      return hex[0] * a1 + hex[1] * a2 + hex[2] * a3 + hex[3] * c;
+    }
+
+    //Trigonal symmetry for Sapphire
+    template <class T> class D3d {
+
+      private:
+         static constexpr size_t INT_NUM = 5;
+         const lvlset::vec<T,3> c3_1; //3 fold rotation
+         const lvlset::vec<T,3> a1;
+         lvlset::vec<T,3> sigma1;
+
+         //NB. angle between a1 and sigma1 is 90 deg (ensured by constructor)
+
+         const T c3_1_angle = 2*math::Pi/3;
+
+         //INT_NUM + 1, due to [1,0,-1,0] and [1,-1,0,0] being equivalent.
+         //Both directions are required to describe the entire fundmental domain,
+         // but interpolation values have to be equal
+         const std::array<std::array<T,4>, INT_NUM+1> interpDirectionsHex{ {{1,0,-1,0}, //=r10m10
+                                                                  {0,0,0, 1}, //=r0001
+                                                                  {1,-1,0,5}, //=r1m105
+                                                                  {4,-5,1,38},//=r4m5138
+                                                                  {1,-1,0,12},//=r1m1012
+                                                                  {1,-1,0,0}} };//=== r10m10
+
+         const std::array<std::array<size_t,3>, INT_NUM> interpSphTri{ {{0,5,2},
+                                                   {0,2,3},
+                                                   {3,2,4},
+                                                   {3,4,1},
+                                                   {0,3,1}} };
+
+         lvlset::vec<T,3> interpVertices[INT_NUM+1];
+
+
+        public:
+        //constructor
+        //Default values result in
+        // x-axis: [1 0 -1 0]
+        // y-axis: [-1 2 -1 0]
+        // z-axis: [0 0 0 1]
+        //and mirror plane along [0 1 -1 0]
+        D3d(  const lvlset::vec<T,3>&  a = {sqrt(3)*0.5, -0.5, 0} , const lvlset::vec<T,3>&  c = {0,0,1}) : c3_1(c), a1(a){
+
+          sigma1 = RotateAroundAxis(a,c,math::Pi/2);
+
+
+
+          for(size_t i=0; i < INT_NUM+1; ++i){
+
+            interpVertices[i] = lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
+            interpVertices[i] = reduceToFundmental(interpVertices[i]);
+          }
+
+        }
+
+          //reduce to fundamental domain, which is 0<theta<Pi/2, 0<phi<2*PI/3
+           lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in){
+              lvlset::vec<T,3> out = in;
+              lvlset::vec<T,3> out_sph = math::cartesianToSpherical(in);
+
+              if(out[2] < 0){
+                out = -in;
+                out_sph = math::cartesianToSpherical(out);
+              }
+
+              while(out_sph[2] > 2.0*math::Pi/3){
+                out = lvlset::RotateAroundAxis(out,c3_1, -c3_1_angle);
+                out_sph = math::cartesianToSpherical(out);
+              }
+
+              if(out_sph[2] > math::Pi/3.0){
+                out = lvlset::ReflectionInPlane(out,sigma1);
+              }
+
+              return out;
+           }
+
+           //input vector is assumed to be normalized |v|=1
+           T interpolate(const lvlset::vec<T,3> in, T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012){
+
+              T interpValues[INT_NUM + 1] = {r10m10, r0001, r1m105, r4m5138, r1m1012,r10m10};
+              lvlset::vec<T,3> in_fund = reduceToFundmental(in);
+
+              bool triangleFound=false;
+              size_t triangleIdx = 0;
+
+              for( ; triangleIdx < INT_NUM + 1; ++triangleIdx){
+
+                if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
+                                                        interpVertices[interpSphTri[triangleIdx][1]],
+                                                        interpVertices[interpSphTri[triangleIdx][2]]))
+                  triangleFound=true;
+                  break;
+              }
+
+              assert(triangleFound);
+
+              lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
+                                                                       interpVertices[interpSphTri[triangleIdx][1]],
+                                                                       interpVertices[interpSphTri[triangleIdx][2]]);
+
+              T result = 0;
+              T sum = 0;
+
+              for(size_t i=0; i<3; ++i){
+                result+=baryCoords[i] * interpValues[ interpSphTri[triangleIdx][i] ]; //linear interpolation
+                sum += baryCoords[i];
+              }
+              result /= sum; //we divide by  b0 + b1 + b2  to ensure partition of unity property
+
+              return result;
+           }
+
+    };
+
+    //Five rate interpolation for saphhire etching
+    template<class T,int D>
+    T sapphireFiveRateInterpolation(const lvlset::vec<T,D>& nv, const lvlset::vec<T,3>& directionA, const lvlset::vec<T,3>& directionC,
+                                    T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012 ){
+
+      D3d<T> sapphire{directionA, directionC};
+
+      lvlset::vec<T,3> NormalVector;
+      NormalVector[0] = nv[0];
+      NormalVector[1] = nv[1];
+      if(D==3){
+        NormalVector[2] = nv[2];
+      }else{
+        NormalVector[2] = 0;
+      }
+
+      return sapphire.interpolate(NormalVector,r10m10,r0001,r1m105,r4m5138,r1m1012);
+
+    }
   }
 }
-
-
-
 
 
 

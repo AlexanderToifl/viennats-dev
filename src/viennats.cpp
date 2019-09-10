@@ -39,7 +39,9 @@
 // #define PROCESS_NONLINEAR_DEPOSITION
 // #define PROCESS_TWOSPECIES_DEPOSITION
 #define PROCESS_WET_ETCHING
+#define PROCESS_SAPPHIRE_WET_ETCHING
 #define PROCESS_SELECTIVE_DEPOSITION
+
 #define PROCESS_FIB
 
 //LS Processes
@@ -124,6 +126,9 @@
 #endif
 #ifdef PROCESS_WET_ETCHING
 #include "Model/ModelWetEtching.h"
+#endif
+#ifdef PROCESS_SAPPHIRE_WET_ETCHING
+#include "Model/ModelSapphireWetEtching.h"
 #endif
 #ifdef PROCESS_SELECTIVE_DEPOSITION
 #include "Model/ModelSelectiveDeposition.h"
@@ -465,6 +470,14 @@ void main_(ParameterType2& p2) {          //TODO changed from const to not const
       proc::ExecuteProcess(LevelSets, m, p, *pIter, output_info);
     }
 #endif
+
+#ifdef PROCESS_SAPPHIRE_WET_ETCHING
+    if (pIter->ModelName == "SapphireWetEtching") {
+      model::SapphireWetEtching m(pIter->ModelParameters);
+      proc::ExecuteProcess(LevelSets, m, p, *pIter, output_info);
+    }
+#endif
+
 
 #ifdef PROCESS_SELECTIVE_DEPOSITION
     if (pIter->ModelName == "SelectiveDeposition") {

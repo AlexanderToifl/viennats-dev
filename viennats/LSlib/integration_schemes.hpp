@@ -704,15 +704,19 @@ namespace lvlset {
     //
     template <class LevelSetType, class VelocityType, class MetaDataType, int order>
     class StencilLocalLaxFriedrichsScalar {
+      private:
+        typedef typename LevelSetType::value_type value_type;
+        typedef typename LevelSetType::index_type index_type;
 
-    private:
+        const value_type CEPS = std::cbrt(std::numeric_limits<value_type>::epsilon());
+
+
         //std::vector<typename LevelSetType::const_iterator_runs_offset> it_slf_stencil_points;
         std::vector<typename LevelSetType::const_iterator_runs_offset> it_neighbors;       //the neighbor iterators
         const LevelSetType & LS;
         const VelocityType& velocities;
 
-        typedef typename LevelSetType::value_type value_type;
-        typedef typename LevelSetType::index_type index_type;
+
 
         const int slf_order = 1; //stencil order
 
@@ -801,7 +805,6 @@ namespace lvlset {
               std::vector< vec<value_type,D>> alphas;
               alphas.reserve(stars.size());
 
-
               for(size_t i = 0; i < stars.size(); ++i){
 
                 index_type star_center_id  = stars[i].center().pt_id();
@@ -824,22 +827,51 @@ namespace lvlset {
                   vec<value_type,D> normal_n =  normal_p;
 
                   vec<value_type,D> dv(value_type(0));
-                  const value_type DN = std::cbrt(std::numeric_limits<value_type>::epsilon())*v;
+                  value_type dn = CEPS*v;
 
                   for(int k=0; k < D; ++k){
 
-                      normal_p[k] -= DN; //p=previous
-                      normal_n[k] += DN; //n==next
+                    if(0){ //WENO3
 
-                    value_type vp=velocities.calculate_normaldependent_velocity(normal_p,material);
-                    value_type vn=velocities.calculate_normaldependent_velocity(normal_n,material);
-                      //central difference
-                      dv[k] = (vn - vp) / (2.0 * DN);
+                      normal_p[k] -= 2*dn;
+                      value_type vp2=velocities.calculate_normaldependent_velocity(normal_p,material);
 
-                      normal_p[k] += DN;
-                      normal_n[k] -= DN;
+                      normal_p[k] += dn;
+                      value_type vp1=velocities.calculate_normaldependent_velocity(normal_p,material);
+
+                      normal_p[k] += dn;
+                      value_type v0=velocities.calculate_normaldependent_velocity(normal_p,material);
+
+                      normal_p[k] += dn;
+                      value_type vn1=velocities.calculate_normaldependent_velocity(normal_p,material);
+
+                      normal_p[k] += dn;
+                      value_type vn2=velocities.calculate_normaldependent_velocity(normal_p,material);
+
+
+
+                      dv[k] = 0.5*(my::math::weno3(vp2,vp1,v0,vn1,vn2,dn,true) + my::math::weno3(vp2,vp1,v0,vn1,vn2,dn,false));
+
+                      normal_p[k] -= 2*dn;
+
+                    } else{ //Central difference
+
+
+
+                        normal_p[k] -= dn; //p=previous
+                        normal_n[k] += dn; //n==next
+
+
+
+                      value_type vp=velocities.calculate_normaldependent_velocity(normal_p,material);
+                      value_type vn=velocities.calculate_normaldependent_velocity(normal_n,material);
+                        //central difference
+                        dv[k] = (vn - vp) / (2.0 * dn);
+
+                        normal_p[k] += dn;
+                        normal_n[k] -= dn;
+                      }
                     }
-
                     //determine \partial H / \partial phi_l
                     for (int k = 0 ; k < D; ++k) { //iterate over dimensions
 
@@ -865,11 +897,10 @@ namespace lvlset {
 
                       //Osher (constant V) term
                       value_type osher=0;
-
                       osher=velocities.calculate_normaldependent_velocity(stars[i].normal_vector(),material);
-
-
                     //Total derivative is sum of terms given above
+if(0)
+                      toifl=monti=0;
                     alpha[k] = std::fabs( monti + toifl + osher);
                   }
                 }
