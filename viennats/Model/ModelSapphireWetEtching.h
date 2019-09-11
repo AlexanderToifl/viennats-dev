@@ -39,6 +39,8 @@ namespace model {
 
         std::vector<bool> zeroVel;
 
+        my::symmetry::D3d<double> sapphireSymmetry;
+
 
     public:
 
@@ -76,6 +78,7 @@ namespace model {
 
             if (!b) msg::print_error("Failed interpreting process parameters!");
 
+            sapphireSymmetry.initInterpolationTriangles(directionA, directionC);
 
             //reverse because material id is reversed w.r.t. layer id (for output)
             /*std::reverse(r100.begin(),r100.end());
@@ -120,8 +123,20 @@ namespace model {
 
             lvlset::vec<double,3> nv{NormalVector[0],NormalVector[1],NormalVector[2]};
 
+            // lvlset::vec<T,3> NormalVector;
+            // NormalVector[0] = nv[0];
+            // NormalVector[1] = nv[1];
+            // if(D==3){
+            //   NormalVector[2] = nv[2];
+            // }else{
+            //   NormalVector[2] = 0;
+            // }
 
-            Velocity = my::symmetry::sapphireFiveRateInterpolation<double,3>(nv, directionA, directionC, r10m10[Material], r0001[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material]);
+            Velocity = -sapphireSymmetry.interpolate(nv,r10m10[Material], r0001[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material]);
+
+            //Velocity = my::symmetry::sapphireFiveRateInterpolation<double,3>(nv, directionA, directionC, r10m10[Material], r0001[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material]);
+
+            //std::cout << Velocity << "\n";
 
         }
 

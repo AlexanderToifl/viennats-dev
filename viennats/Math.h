@@ -12,7 +12,7 @@
 
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
-
+#define DEBG 0
 
 #include <cmath>
 #include <array>
@@ -959,7 +959,7 @@ namespace my {
                                const lvlset::vec<T,3>& vertex2,
                                const lvlset::vec<T,3>& vertex3){
 
-          const T eps=1e-12;
+          const T eps=1e-4;
           T distances[3] = {0, 0, 0};
           const lvlset::vec<T,3> vertices[3] = {vertex1,vertex2, vertex3};
 
@@ -1024,7 +1024,10 @@ namespace my {
 
       lvlset::vec<T,3> a2, a3;
 
-      assert(std::fabs(hex[0] + hex[1] + hex[2]) > 1e-4);
+      if(std::fabs(hex[0] + hex[1] + hex[2]) > 1e-4){
+        std::cerr << "millerBravaisToCartesian: invalid input [" << hex[0] << ", " << hex[1] << ", " << hex[2] << ", " << hex[3] << "]\n";
+        exit(-1);
+      }
 
       a2 = lvlset::RotateAroundAxis(a1, c, 2.0 * math::Pi/3);
       a3 = lvlset::RotateAroundAxis(a1, c, 4.0 * math::Pi/3);
@@ -1037,8 +1040,8 @@ namespace my {
 
       private:
          static constexpr size_t INT_NUM = 5;
-         const lvlset::vec<T,3> c3_1; //3 fold rotation
-         const lvlset::vec<T,3> a1;
+         lvlset::vec<T,3> c3_1; //3 fold rotation
+         lvlset::vec<T,3> a1;
          lvlset::vec<T,3> sigma1;
 
          //NB. angle between a1 and sigma1 is 90 deg (ensured by constructor)
@@ -1065,28 +1068,35 @@ namespace my {
 
 
         public:
+          void initInterpolationTriangles(const lvlset::vec<T,3>&  a, const lvlset::vec<T,3>& c){
+             c3_1 =c;
+             a1 = a;
+             sigma1=a;
+
+             for(size_t i=0; i < INT_NUM+1; ++i){
+
+               interpVertices[i] = lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
+               interpVertices[i] = reduceToFundmental(interpVertices[i]);
+
+             }
+          }
         //constructor
         //Default values result in
         // x-axis: [1 0 -1 0]
         // y-axis: [-1 2 -1 0]
         // z-axis: [0 0 0 1]
         //and mirror plane along [0 1 -1 0]
-        D3d(  const lvlset::vec<T,3>&  a = {sqrt(3)*0.5, -0.5, 0} , const lvlset::vec<T,3>&  c = {0,0,1}) : c3_1(c), a1(a){
-
-          sigma1 = RotateAroundAxis(a,c,math::Pi/2);
-
-
-
-          for(size_t i=0; i < INT_NUM+1; ++i){
-
-            interpVertices[i] = lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
-            interpVertices[i] = reduceToFundmental(interpVertices[i]);
+        //D3d(  const lvlset::vec<T,3>&  a = {sqrt(3)*0.5, -0.5, 0} , const lvlset::vec<T,3>&  c = {0,0,1}) : c3_1(c), a1(a){
+          D3d(){
+              initInterpolationTriangles(lvlset::vec<T,3>{sqrt(3)*0.5, -0.5, 0}, lvlset::vec<T,3>{0,0,1});
           }
 
-        }
+          D3d(const lvlset::vec<T,3>&  a,const lvlset::vec<T,3>&  c){
+              initInterpolationTriangles(a,c);
+          }
 
           //reduce to fundamental domain, which is 0<theta<Pi/2, 0<phi<2*PI/3
-           lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in){
+           lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const {
               lvlset::vec<T,3> out = in;
               lvlset::vec<T,3> out_sph = math::cartesianToSpherical(in);
 
@@ -1108,7 +1118,7 @@ namespace my {
            }
 
            //input vector is assumed to be normalized |v|=1
-           T interpolate(const lvlset::vec<T,3> in, T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012){
+           T interpolate(const lvlset::vec<T,3> in, T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012) const{
 
               T interpValues[INT_NUM + 1] = {r10m10, r0001, r1m105, r4m5138, r1m1012,r10m10};
               lvlset::vec<T,3> in_fund = reduceToFundmental(in);
@@ -1116,16 +1126,21 @@ namespace my {
               bool triangleFound=false;
               size_t triangleIdx = 0;
 
-              for( ; triangleIdx < INT_NUM + 1; ++triangleIdx){
+              for( ; triangleIdx < (INT_NUM + 1); ++triangleIdx){
+
 
                 if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
                                                         interpVertices[interpSphTri[triangleIdx][1]],
-                                                        interpVertices[interpSphTri[triangleIdx][2]]))
-                  triangleFound=true;
-                  break;
+                                                        interpVertices[interpSphTri[triangleIdx][2]])){
+                    triangleFound=true;
+                    break;
+                }
               }
 
-              assert(triangleFound);
+              if(!triangleFound){
+                std::cerr << "\nTriangle not found\n";
+                std::cerr << "Point (fundmental): " << in_fund << "\n";
+              }
 
               lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
                                                                        interpVertices[interpSphTri[triangleIdx][1]],
@@ -1145,25 +1160,15 @@ namespace my {
 
     };
 
-    //Five rate interpolation for saphhire etching
-    template<class T,int D>
-    T sapphireFiveRateInterpolation(const lvlset::vec<T,D>& nv, const lvlset::vec<T,3>& directionA, const lvlset::vec<T,3>& directionC,
-                                    T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012 ){
-
-      D3d<T> sapphire{directionA, directionC};
-
-      lvlset::vec<T,3> NormalVector;
-      NormalVector[0] = nv[0];
-      NormalVector[1] = nv[1];
-      if(D==3){
-        NormalVector[2] = nv[2];
-      }else{
-        NormalVector[2] = 0;
-      }
-
-      return sapphire.interpolate(NormalVector,r10m10,r0001,r1m105,r4m5138,r1m1012);
-
-    }
+    // //Five rate interpolation for saphhire etching
+    // template<class T,int D>
+    // T sapphireFiveRateInterpolation(const lvlset::vec<T,D>& nv, const lvlset::vec<T,3>& directionA, const lvlset::vec<T,3>& directionC,
+    //                                 T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012 ){
+    //
+    //
+    //
+    //
+    // }
   }
 }
 
