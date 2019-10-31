@@ -16,6 +16,16 @@
 
 #include <cmath>
 #include <array>
+#include "libqhullcpp/RboxPoints.h"
+#include "libqhullcpp/QhullError.h"
+#include "libqhullcpp/Qhull.h"
+#include "libqhullcpp/QhullQh.h"
+#include "libqhullcpp/QhullFacet.h"
+#include "libqhullcpp/QhullFacetList.h"
+#include "libqhullcpp/QhullLinkedList.h"
+#include "libqhullcpp/QhullVertex.h"
+#include "libqhullcpp/QhullSet.h"
+#include "libqhullcpp/QhullVertexSet.h"
 
 
 //at for fourRateInterpolation()
@@ -1035,14 +1045,17 @@ namespace my {
       return hex[0] * a1 + hex[1] * a2 + hex[2] * a3 + hex[3] * c;
     }
 
+
+
+
     //Trigonal symmetry for Sapphire
     template <class T> class D3d {
 
       private:
          static constexpr size_t INT_NUM = 5;
-         lvlset::vec<T,3> c3_1; //3 fold rotation
-         lvlset::vec<T,3> a1;
-         lvlset::vec<T,3> sigma1;
+         const lvlset::vec<T,3> c3_1{0,0,1}; //3 fold rotation
+         const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
+         const lvlset::vec<T,3> sigma1 = a1;
 
          //NB. angle between a1 and sigma1 is 90 deg (ensured by constructor)
 
@@ -1066,33 +1079,57 @@ namespace my {
 
          lvlset::vec<T,3> interpVertices[INT_NUM+1];
 
+         T basalAngle = 0; //angle between user defined a1 and a1{sqrt(3)*0.5, -0.5, 0}
+
 
         public:
-          void initInterpolationTriangles(const lvlset::vec<T,3>&  a, const lvlset::vec<T,3>& c){
-             c3_1 =c;
-             a1 = a;
-             sigma1=a;
 
-             for(size_t i=0; i < INT_NUM+1; ++i){
-
-               interpVertices[i] = lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
-               interpVertices[i] = reduceToFundmental(interpVertices[i]);
-
-             }
-          }
         //constructor
         //Default values result in
         // x-axis: [1 0 -1 0]
         // y-axis: [-1 2 -1 0]
         // z-axis: [0 0 0 1]
         //and mirror plane along [0 1 -1 0]
-        //D3d(  const lvlset::vec<T,3>&  a = {sqrt(3)*0.5, -0.5, 0} , const lvlset::vec<T,3>&  c = {0,0,1}) : c3_1(c), a1(a){
           D3d(){
-              initInterpolationTriangles(lvlset::vec<T,3>{sqrt(3)*0.5, -0.5, 0}, lvlset::vec<T,3>{0,0,1});
+               for(size_t i=0; i < INT_NUM+1; ++i){
+
+                 interpVertices[i] = lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
+                 interpVertices[i] = reduceToFundmental(interpVertices[i]);
+
+               }
+
+               orgQhull::Qhull qhull;
+               std::vector<orgQhull::vec3> vertices;
+
+               for(int i(0); i < INT_NUM+1; ++i)
+                  vertices.push_back(orgQhull::vec3(interpVertices[i][0], interpVertices[i][1], interpVertices[i][2]) );
+
+               qhull.runQhull3D(vertices, "Qt");
+
+               orgQhull::QhullFacetList facets = qhull.facetList();
+               for (orgQhull::QhullFacetList::iterator it = facets.begin(); it != facets.end(); ++it)
+               {
+                    if (!(*it).isGood()) continue;
+                    orgQhull::QhullFacet f = *it;
+                    orgQhull::QhullVertexSet vSet = f.vertices();
+                    for (orgQhull::QhullVertexSet::iterator vIt = vSet.begin(); vIt != vSet.end(); ++vIt)
+                    {
+                        orgQhull::QhullVertex v = *vIt;
+                        orgQhull::QhullPoint p = v.point();
+                        double * coords = p.coordinates();
+                        orgQhull::vec3 aPoint = orgQhull::vec3(coords[0], coords[1], coords[2]);
+                        std::cout << aPoint.x() << ", " << aPoint.y() << ", " << aPoint.z() << "\n";
+                    }
+                }
+
+
           }
 
-          D3d(const lvlset::vec<T,3>&  a,const lvlset::vec<T,3>&  c){
-              initInterpolationTriangles(a,c);
+          //NOTE c direction coordinate rotation is not implemented atm
+          void defineCoordinateSystem(const lvlset::vec<T,3>&  a){
+              basalAngle = lvlset::SignedAngle(a, a1,c3_1);
+
+              std::cout << "a = " << a << ", a1 = " << a1 << ", c3_1 = " << c3_1 << ", Basal angle = " << basalAngle << "\n";
           }
 
           //reduce to fundamental domain, which is 0<theta<Pi/2, 0<phi<2*PI/3
@@ -1121,7 +1158,9 @@ namespace my {
            T interpolate(const lvlset::vec<T,3> in, T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012) const{
 
               T interpValues[INT_NUM + 1] = {r10m10, r0001, r1m105, r4m5138, r1m1012,r10m10};
-              lvlset::vec<T,3> in_fund = reduceToFundmental(in);
+
+              lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
+              in_fund = reduceToFundmental(in_fund);
 
               bool triangleFound=false;
               size_t triangleIdx = 0;

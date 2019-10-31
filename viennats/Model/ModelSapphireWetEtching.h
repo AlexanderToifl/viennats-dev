@@ -78,7 +78,7 @@ namespace model {
 
             if (!b) msg::print_error("Failed interpreting process parameters!");
 
-            sapphireSymmetry.initInterpolationTriangles(directionA, directionC);
+            sapphireSymmetry.defineCoordinateSystem(directionA);
 
             //reverse because material id is reversed w.r.t. layer id (for output)
             /*std::reverse(r100.begin(),r100.end());

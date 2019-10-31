@@ -20,6 +20,7 @@
 #include "math.hpp"
 #include "message.h"
 
+
 namespace lvlset {
 
     template <class T,int D> class vec {
@@ -291,6 +292,25 @@ namespace lvlset {
 
     template <class T> inline vec<T,2> RotateRight(const vec<T,2>& v) {
         return vec<T,2>(v[1],-v[0]);
+    }
+
+
+    template <class T> inline T Angle(const vec<T,3>& v1, const vec<T,3>& v2){
+      T cosT = dot(v1,v2) / (NormL2(v1)*NormL2(v2));
+
+      if(cosT > 1)
+        cosT = 1;
+      else if(cosT < -1)
+        cosT = -1;
+      return acos(cosT);
+    }
+
+    //signed angle of two vectors v1 and v2, which reside in a plane with normal vector vn
+    template <class T> inline T SignedAngle(const vec<T,3>& v1, const vec<T,3>& v2, const vec<T,3>& vn){
+
+      T angle = Angle(v1,v2);
+      angle *= math::sign(  dot(vn, cross(v1,v2) ));
+      return angle;
     }
 
     template <class T> inline vec<T,3> cross(const vec<T,3>& v1,const vec<T,3>& v2) {
