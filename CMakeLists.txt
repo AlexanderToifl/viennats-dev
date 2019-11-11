@@ -8,7 +8,7 @@ PROJECT(ViennaLS)
 
 set(VERSION_MAJOR 2)
 set(VERSION_MINOR 3)
-set(VERSION_PATCH 1)
+set(VERSION_PATCH 2)
 set(VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
 ADD_DEFINITIONS(-DVIENNATS_VERSION="${VERSION}")
@@ -128,7 +128,7 @@ ENDIF(VTK_FOUND)
 
 #qhull
 
-INCLUDE_DIRECTORIES("/home/atoif/QHull/qhull-2019.1/src")
+#INCLUDE_DIRECTORIES("/home/atoif/QHull/qhull-2019.1/src")
 #INCLUDE_DIRECTORIES("/usr/include/qt4/")
 
 
@@ -148,11 +148,11 @@ add_custom_target( MAKE_HEADERS_VISIBLE SOURCES ${MAKE_HEADERS_VISIBLE_SRC} )
 # add executable and link
 ADD_EXECUTABLE(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} src/viennats.cpp)
 
-FILE(GLOB SRCFILES /home/atoif/QHull/qhull-2019.1/src/libqhullcpp/*.cpp)
-LINK_DIRECTORIES(/home/atoif/QHull/qhull-2019.1/build)
+#FILE(GLOB SRCFILES /home/atoif/QHull/qhull-2019.1/src/libqhullcpp/*.cpp)
+#LINK_DIRECTORIES(/home/atoif/QHull/qhull-2019.1/build)
 
 IF(VIENNATS_STATIC_BUILD)
- TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES}  /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  "-static" )
+ TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES}  "-static" )# /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  "-static" )
 ELSE()
- TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES} /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a  /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  )
+ TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES})# /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a  /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  )
 ENDIF(VIENNATS_STATIC_BUILD)

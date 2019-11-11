@@ -31,7 +31,11 @@ namespace model {
         lvlset::vec<double,3> directionC;
 
         //[1,0,-1,0], [0,0,0,1], [1,-1,0,5], [4,-5,1,38], [1,-1,0,12], [1,-1,0,0]
+
+        std::vector<double> r11m22;
+        std::vector<double> r10m12;
         std::vector<double> r10m10;
+        std::vector<double> r31m415;
         std::vector<double> r0001;
         std::vector<double> r1m105;
         std::vector<double> r4m5138;
@@ -68,7 +72,10 @@ namespace model {
                     *(
                           (str_p("directionA")  >> '='  >> '{' >> real_p[assign_a(directionA[0])]  >> "," >> real_p[assign_a(directionA[1])] >> "," >> real_p[assign_a(directionA[2])] >> '}' >> ';') |
                           (str_p("directionC")  >> '='  >> '{' >> real_p[assign_a(directionC[0])]  >> "," >> real_p[assign_a(directionC[1])] >> "," >> real_p[assign_a(directionC[2])] >> '}' >> ';') |
+                          (str_p("rate11m22")  >>  '='  >>  '{' >> ( real_p[push_back_a(r11m22)]  % ',')>> '}'  >> ';') |
+                          (str_p("rate10m12")  >>  '='  >>  '{' >> ( real_p[push_back_a(r10m12)]  % ',')>> '}'  >> ';') |
                           (str_p("rate10m10")  >>  '='  >>  '{' >> ( real_p[push_back_a(r10m10)]  % ',')>> '}'  >> ';') |
+                          (str_p("rate31m415")  >>  '='  >>  '{' >> ( real_p[push_back_a(r31m415)]  % ',')>> '}'  >> ';') |
                           (str_p("rate0001")  >>  '='  >>  '{' >> ( real_p[push_back_a(r0001)]  % ',')>> '}'  >> ';') |
                           (str_p("rate1m105")  >>  '='  >>  '{' >> ( real_p[push_back_a(r1m105)]  % ',')>> '}'  >> ';') |
                           (str_p("rate4m5138")  >>  '='  >>  '{' >> ( real_p[push_back_a(r4m5138)]  % ',')>> '}'  >> ';') |
@@ -89,12 +96,15 @@ namespace model {
             // find materials with no growth in any direction and store in zeroVel
             for(unsigned int i=0; i < r10m10.size(); ++i){
               zeroVel.push_back(false);
-              if(fabs(r10m10[i]) < EPS)
-                if(fabs(r0001[i]) < EPS)
-                  if(fabs(r1m105[i]) < EPS)
-                    if(fabs(r4m5138[i]) < EPS)
-                      if(fabs(r1m1012[i]) < EPS)
-                        zeroVel[i]=true;
+              if(fabs(r11m22[i]) < EPS)
+                if(fabs(r10m12[i]) < EPS)
+                  if(fabs(r10m10[i]) < EPS)
+                      if(fabs(r31m415[i]) < EPS)
+                        if(fabs(r0001[i]) < EPS)
+                          if(fabs(r1m105[i]) < EPS)
+                            if(fabs(r4m5138[i]) < EPS)
+                              if(fabs(r1m1012[i]) < EPS)
+                                zeroVel[i]=true;
             }
 
 
@@ -132,7 +142,7 @@ namespace model {
             //   NormalVector[2] = 0;
             // }
 
-            Velocity = -sapphireSymmetry.interpolate(nv,r10m10[Material], r0001[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material]);
+            Velocity = -sapphireSymmetry.interpolate(nv,r11m22[Material], r10m12[Material],r10m10[Material], r31m415[Material], r0001[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material]);
 
             //Velocity = my::symmetry::sapphireFiveRateInterpolation<double,3>(nv, directionA, directionC, r10m10[Material], r0001[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material]);
 

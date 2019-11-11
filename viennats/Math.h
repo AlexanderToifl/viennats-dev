@@ -16,6 +16,8 @@
 
 #include <cmath>
 #include <array>
+
+#if 0
 #include "libqhullcpp/RboxPoints.h"
 #include "libqhullcpp/QhullError.h"
 #include "libqhullcpp/Qhull.h"
@@ -26,7 +28,7 @@
 #include "libqhullcpp/QhullVertex.h"
 #include "libqhullcpp/QhullSet.h"
 #include "libqhullcpp/QhullVertexSet.h"
-
+#endif
 
 //at for fourRateInterpolation()
 #include "LSlib/levelset.hpp"
@@ -1046,13 +1048,12 @@ namespace my {
     }
 
 
-
-
     //Trigonal symmetry for Sapphire
     template <class T> class D3d {
 
       private:
-         static constexpr size_t INT_NUM = 5;
+         static constexpr size_t INT_NUM = 9;
+         static constexpr size_t TRI_NUM = 10;
          const lvlset::vec<T,3> c3_1{0,0,1}; //3 fold rotation
          const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
          const lvlset::vec<T,3> sigma1 = a1;
@@ -1064,23 +1065,33 @@ namespace my {
          //INT_NUM + 1, due to [1,0,-1,0] and [1,-1,0,0] being equivalent.
          //Both directions are required to describe the entire fundmental domain,
          // but interpolation values have to be equal
-         const std::array<std::array<T,4>, INT_NUM+1> interpDirectionsHex{ {{1,0,-1,0}, //=r10m10
+          const std::array<std::array<T,4>, INT_NUM> interpDirectionsHex{ {
+                                                                  {1,1,-2,2}, //=r11m22
+                                                                  {1,0,-1,2}, //=r10m12
+                                                                  {1,0,-1,0}, //=r10m10
+                                                                  {3,1,-4,15},//r31m415
                                                                   {0,0,0, 1}, //=r0001
                                                                   {1,-1,0,5}, //=r1m105
                                                                   {4,-5,1,38},//=r4m5138
                                                                   {1,-1,0,12},//=r1m1012
                                                                   {1,-1,0,0}} };//=== r10m10
 
-         const std::array<std::array<size_t,3>, INT_NUM> interpSphTri{ {{0,5,2},
-                                                   {0,2,3},
-                                                   {3,2,4},
-                                                   {3,4,1},
-                                                   {0,3,1}} };
 
-         lvlset::vec<T,3> interpVertices[INT_NUM+1];
+         const std::array<std::array<size_t,3>, TRI_NUM> interpSphTri{ {
+                                                                   {8, 0, 2},
+                                                                   {0, 1, 2},
+                                                                   {5, 0, 8},
+                                                                   {3, 1, 0},
+                                                                   {5, 3, 0},
+                                                                   {6, 3, 5},
+                                                                   {1, 3, 4},
+                                                                   {3, 6, 4},
+                                                                   {6, 7, 4},
+                                                                   {7, 6, 5}} };
+
+         lvlset::vec<T,3> interpVertices[INT_NUM];
 
          T basalAngle = 0; //angle between user defined a1 and a1{sqrt(3)*0.5, -0.5, 0}
-
 
         public:
 
@@ -1091,44 +1102,15 @@ namespace my {
         // z-axis: [0 0 0 1]
         //and mirror plane along [0 1 -1 0]
           D3d(){
-               for(size_t i=0; i < INT_NUM+1; ++i){
-
-                 interpVertices[i] = lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
-                 interpVertices[i] = reduceToFundmental(interpVertices[i]);
-
+               for(size_t i=0; i < INT_NUM; ++i){
+                 lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
+                 interpVertices[i] = reduceToFundmental(vec);
                }
-
-               orgQhull::Qhull qhull;
-               std::vector<orgQhull::vec3> vertices;
-
-               for(int i(0); i < INT_NUM+1; ++i)
-                  vertices.push_back(orgQhull::vec3(interpVertices[i][0], interpVertices[i][1], interpVertices[i][2]) );
-
-               qhull.runQhull3D(vertices, "Qt");
-
-               orgQhull::QhullFacetList facets = qhull.facetList();
-               for (orgQhull::QhullFacetList::iterator it = facets.begin(); it != facets.end(); ++it)
-               {
-                    if (!(*it).isGood()) continue;
-                    orgQhull::QhullFacet f = *it;
-                    orgQhull::QhullVertexSet vSet = f.vertices();
-                    for (orgQhull::QhullVertexSet::iterator vIt = vSet.begin(); vIt != vSet.end(); ++vIt)
-                    {
-                        orgQhull::QhullVertex v = *vIt;
-                        orgQhull::QhullPoint p = v.point();
-                        double * coords = p.coordinates();
-                        orgQhull::vec3 aPoint = orgQhull::vec3(coords[0], coords[1], coords[2]);
-                        std::cout << aPoint.x() << ", " << aPoint.y() << ", " << aPoint.z() << "\n";
-                    }
-                }
-
-
           }
 
           //NOTE c direction coordinate rotation is not implemented atm
           void defineCoordinateSystem(const lvlset::vec<T,3>&  a){
               basalAngle = lvlset::SignedAngle(a, a1,c3_1);
-
               std::cout << "a = " << a << ", a1 = " << a1 << ", c3_1 = " << c3_1 << ", Basal angle = " << basalAngle << "\n";
           }
 
@@ -1155,9 +1137,9 @@ namespace my {
            }
 
            //input vector is assumed to be normalized |v|=1
-           T interpolate(const lvlset::vec<T,3> in, T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012) const{
+           T interpolate(const lvlset::vec<T,3> in, T r11m22, T r10m12, T r10m10, T r31m415, T r0001, T r1m105, T r4m5138, T r1m1012) const{
 
-              T interpValues[INT_NUM + 1] = {r10m10, r0001, r1m105, r4m5138, r1m1012,r10m10};
+              T interpValues[INT_NUM] = {r11m22, r10m12, r10m10, r31m415,r0001, r1m105, r4m5138, r1m1012,r10m10};
 
               lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
               in_fund = reduceToFundmental(in_fund);
@@ -1165,12 +1147,11 @@ namespace my {
               bool triangleFound=false;
               size_t triangleIdx = 0;
 
-              for( ; triangleIdx < (INT_NUM + 1); ++triangleIdx){
-
-
+              for( ; triangleIdx < TRI_NUM; ++triangleIdx){
                 if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
                                                         interpVertices[interpSphTri[triangleIdx][1]],
                                                         interpVertices[interpSphTri[triangleIdx][2]])){
+
                     triangleFound=true;
                     break;
                 }
@@ -1179,12 +1160,12 @@ namespace my {
               if(!triangleFound){
                 std::cerr << "\nTriangle not found\n";
                 std::cerr << "Point (fundmental): " << in_fund << "\n";
+                exit(-1);
               }
 
               lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
                                                                        interpVertices[interpSphTri[triangleIdx][1]],
                                                                        interpVertices[interpSphTri[triangleIdx][2]]);
-
               T result = 0;
               T sum = 0;
 
@@ -1198,16 +1179,6 @@ namespace my {
            }
 
     };
-
-    // //Five rate interpolation for saphhire etching
-    // template<class T,int D>
-    // T sapphireFiveRateInterpolation(const lvlset::vec<T,D>& nv, const lvlset::vec<T,3>& directionA, const lvlset::vec<T,3>& directionC,
-    //                                 T r10m10, T r0001, T r1m105, T r4m5138, T r1m1012 ){
-    //
-    //
-    //
-    //
-    // }
   }
 }
 
