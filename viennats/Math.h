@@ -1144,6 +1144,11 @@ namespace my {
               lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
               in_fund = reduceToFundmental(in_fund);
 
+              if(dot(in_fund,lvlset::vec<T,3>{0,0,1})/Norm(in_fund)  > 0.993){
+                  return r0001;
+              }
+
+
               bool triangleFound=false;
               size_t triangleIdx = 0;
 
