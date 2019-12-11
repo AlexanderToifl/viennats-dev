@@ -1053,7 +1053,7 @@ namespace my {
 
       private:
          static constexpr size_t INT_NUM = 9;
-         static constexpr size_t TRI_NUM = 10;
+         static constexpr size_t TRI_NUM = 8;
          const lvlset::vec<T,3> c3_1{0,0,1}; //3 fold rotation
          const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
          const lvlset::vec<T,3> sigma1 = a1;
@@ -1066,28 +1066,28 @@ namespace my {
          //Both directions are required to describe the entire fundmental domain,
          // but interpolation values have to be equal
           const std::array<std::array<T,4>, INT_NUM> interpDirectionsHex{ {
-                                                                  {1,1,-2,2}, //=r11m22
-                                                                  {1,0,-1,2}, //=r10m12
-                                                                  {1,0,-1,0}, //=r10m10
-                                                                  {3,1,-4,15},//r31m415
-                                                                  {0,0,0, 1}, //=r0001
-                                                                  {1,-1,0,5}, //=r1m105
-                                                                  {4,-5,1,38},//=r4m5138
-                                                                  {1,-1,0,12},//=r1m1012
-                                                                  {1,-1,0,0}} };//=== r10m10
+                                                                  {0,0,0,1},//c direction
+                                                                  {1,-1,0,2},//r direction
+                                                                  {1,-1,0,0},//m direction
+                                                                  {1,1,-2,0},//a direction
+                                                                  {1,-1,0,5},//Shen 1 direction
+                                                                  {4,-5,1,38},//Shen 3 direction
+                                                                  {1,-1,0,12},//Shen 4 direction
+                                                                  {1,0,-1,2},//r' direction (=r in hex, but not in trigonal)
+                                                                  {1,0,-1,0}//additional m direction 
+                                                                    } };
 
 
          const std::array<std::array<size_t,3>, TRI_NUM> interpSphTri{ {
-                                                                   {8, 0, 2},
-                                                                   {0, 1, 2},
-                                                                   {5, 0, 8},
-                                                                   {3, 1, 0},
-                                                                   {5, 3, 0},
-                                                                   {6, 3, 5},
-                                                                   {1, 3, 4},
-                                                                   {3, 6, 4},
-                                                                   {6, 7, 4},
-                                                                   {7, 6, 5}} };
+                                                                   {4, 7, 1},
+                                                                   {1, 3, 2},
+                                                                   {3, 7, 8},
+                                                                   {7, 3, 1},
+                                                                   {7, 5, 0},
+                                                                   {4, 5, 7},
+                                                                   {5, 6, 0},
+                                                                   {6, 5, 4},
+                                                                   } };
 
          lvlset::vec<T,3> interpVertices[INT_NUM];
 
@@ -1114,6 +1114,7 @@ namespace my {
               std::cout << "a = " << a << ", a1 = " << a1 << ", c3_1 = " << c3_1 << ", Basal angle = " << basalAngle << "\n";
           }
 
+
           //reduce to fundamental domain, which is 0<theta<Pi/2, 0<phi<2*PI/3
            lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const {
               lvlset::vec<T,3> out = in;
@@ -1137,9 +1138,9 @@ namespace my {
            }
 
            //input vector is assumed to be normalized |v|=1
-           T interpolate(const lvlset::vec<T,3> in, T r11m22, T r10m12, T r10m10, T r31m415, T r0001, T r1m105, T r4m5138, T r1m1012) const{
+           T interpolate(const lvlset::vec<T,3> in, T r0001, T r1m102, T r1m100, T r11m20, T r1m105, T r4m5138, T r1m1012, T r10m12  ) const{
 
-              T interpValues[INT_NUM] = {r11m22, r10m12, r10m10, r31m415,r0001, r1m105, r4m5138, r1m1012,r10m10};
+              T interpValues[INT_NUM] = {r0001, r1m102, r1m100, r11m20, r1m105, r4m5138, r1m1012,r10m12, r1m100};
 
               lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
               in_fund = reduceToFundmental(in_fund);
