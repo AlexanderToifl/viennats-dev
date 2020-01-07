@@ -118,6 +118,22 @@ namespace model {
 				bool connected,
 				bool visible) const {}
 
+        template<class VecType>
+        void CalculateSLFVelocity(
+                double &Velocity,
+                const VecType& NormalVector,
+                const double *Coverages,
+                const double *Rates,
+                int Material,
+                bool connected,
+                bool visible,
+                const int ix, const int iy, const int iz) const {
+
+            CalculateVelocity(Velocity,NormalVector,Coverages,Rates,Material,connected,visible);
+        }
+
+
+
 
         static void UpdateCoverage(double *Coverages, const double *Rates) {}
 

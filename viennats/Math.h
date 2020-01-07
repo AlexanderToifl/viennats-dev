@@ -988,7 +988,7 @@ namespace my {
                }
           }
 
-         // if(isEqual(point(0),point(1),1e-12))
+         // if(isEqual(point(0),point(),1e-12))
        //    std::cout << "isOnSphericalTriangle: point:" << point << ", distances: " << distances[0] << ", " << distances[1] << ", " << distances[2] << std::endl;
 
 
@@ -1093,7 +1093,31 @@ namespace my {
 
          T basalAngle = 0; //angle between user defined a1 and a1{sqrt(3)*0.5, -0.5, 0}
 
-        public:
+
+         //sampling arrays
+         //plain velocity
+         using SamplingTable = std::vector<std::vector<T> >; 
+
+         std::vector<SamplingTable> vel_sampled;
+         std::vector<SamplingTable> vel100_sampled; //n + dN*ex
+         std::vector<SamplingTable> velm100_sampled; //n - dN*ex
+         std::vector<SamplingTable> vel010_sampled; //n + dN*ey
+         std::vector<SamplingTable> vel0m10_sampled; //n -dN*ey
+         std::vector<SamplingTable> vel001_sampled; //n +dN*ez
+         std::vector<SamplingTable> vel00m1_sampled; //n -dN*ez
+
+         const T phi_min = 0;
+         const T phi_max = 2*math::Pi;
+
+         const T u_min = -1;
+         const T u_max = 1;
+
+         size_t sampleM = 0;//default value
+         T du = 0;//default value
+         T dphi = 0;//default value
+        
+         const T CEPS = std::cbrt(std::numeric_limits<T>::epsilon());
+      public:
 
         //constructor
         //Default values result in
@@ -1112,6 +1136,113 @@ namespace my {
           void defineCoordinateSystem(const lvlset::vec<T,3>&  a){
               basalAngle = lvlset::SignedAngle(a, a1,c3_1);
               std::cout << "a = " << a << ", a1 = " << a1 << ", c3_1 = " << c3_1 << ", Basal angle = " << basalAngle << "\n";
+          }
+
+          void sampleRateFunctions(const std::vector<T>& r0001,
+                                   const std::vector<T>& r1m102,
+                                   const std::vector<T>& r1m100,
+                                   const std::vector<T>& r11m20,
+                                   const std::vector<T>& r1m105,
+                                   const std::vector<T>& r4m5138,
+                                   const std::vector<T>& r1m1012,
+                                   const std::vector<T>& r10m12,
+                                   const size_t M) {
+
+                size_t mats(r0001.size());
+
+                du = (u_max-u_min)/M;
+                dphi = (phi_max-phi_min)/M;
+
+                std::cout << "Started sampling of D3d rate function, M = " << M << "\n";
+                for(size_t matNum=0; matNum < mats; ++matNum){
+
+                    //TODO more elegant sampling table 
+                    SamplingTable vel(M+1);
+                    for(auto& v : vel) v.resize(M+1);
+
+                    SamplingTable vel100(M+1);
+                    for(auto& v : vel100) v.resize(M+1);
+
+                    SamplingTable velm100(M+1);
+                    for(auto& v : velm100) v.resize(M+1);
+                    
+                    SamplingTable vel010(M+1);
+                    for(auto& v : vel010) v.resize(M+1);
+
+                    SamplingTable vel0m10(M+1);
+                    for(auto& v : vel0m10) v.resize(M+1);
+
+                    SamplingTable vel001(M+1);
+                    for(auto& v : vel001) v.resize(M+1);
+
+                    SamplingTable vel00m1(M+1);
+                    for(auto& v : vel00m1) v.resize(M+1);
+
+
+                    for(size_t i=0; i <= M; ++i){                   
+                        T phi = phi_min + i*dphi;
+                        
+                        for(size_t j=0; j <= M; ++j){
+                            T u = u_min + j*du;
+
+                            T nx = sqrt(1-u*u)*cos(phi);
+                            T ny = sqrt(1-u*u)*sin(phi);
+                            T nz = u; 
+
+                            T v =  interpolate(lvlset::vec<T,3>{nx,ny,nz},
+                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                         
+                            T DN = v * CEPS;
+
+                            vel[i][j] = v;
+                           
+                             
+                            vel100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx+DN,ny,nz}),
+                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+
+                            
+                            velm100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx-DN,ny,nz}),
+                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+    
+
+                            vel010[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny+DN,nz}),
+                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                            
+                            vel0m10[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny-DN,nz}),
+                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                            
+                            vel001[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz+DN}),
+                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                            
+                            vel00m1[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz-DN}),
+                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                        }
+
+                    }
+
+                  vel_sampled.push_back(vel); 
+                  vel100_sampled.push_back(vel100);
+                  velm100_sampled.push_back(velm100);
+                  vel010_sampled.push_back(vel010);
+                  vel0m10_sampled.push_back(vel0m10);
+                  vel001_sampled.push_back(vel001);
+                  vel00m1_sampled.push_back(vel00m1);
+
+                  std::cout << "Material #" << matNum << " done\n";
+                      
+
+                }
+                sampleM = M;
+                std::cout << "Finished D3d sampling\n";
+
+            
           }
 
 
@@ -1136,6 +1267,47 @@ namespace my {
 
               return out;
            }
+
+           T interpolateSampled(const lvlset::vec<T,3> in, const int materialNum) const {
+                T u = in[2];
+                T phi = atan2(in[1],in[0]) + math::Pi;  
+
+                int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
+                int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
+
+                return vel_sampled[materialNum][i][j];
+           }
+
+           T interpolateSLFSampled(const lvlset::vec<T,3> in, const int materialNum, const int ix, const int iy, const int iz) const {
+                T u = in[2];
+                T phi = atan2(in[1],in[0]) + math::Pi;  
+
+                int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
+                int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
+
+                if( ix == 1 && iy == 0 && iz == 0)
+                    return vel100_sampled[materialNum][i][j];
+                
+                if( ix == -1 && iy == 0 && iz == 0)
+                    return velm100_sampled[materialNum][i][j];
+
+                if( ix == 0 && iy == 1 && iz == 0)
+                    return vel010_sampled[materialNum][i][j];
+                
+                if( ix == 0 && iy == -1 && iz == 0)
+                    return vel0m10_sampled[materialNum][i][j];
+                
+                if( ix == 0 && iy == 0 && iz == 1)
+                    return vel001_sampled[materialNum][i][j];
+                
+                if( ix == 0 && iy == 0 && iz == -1)
+                    return vel00m1_sampled[materialNum][i][j];
+
+                std::cerr << "interpolateSLFSampled, invalid (ix, iy, iz) combination: " << ix << ", " << iy << ", " << iz << "\n";
+                exit(-1);
+                return 0;
+           }
+
 
            //input vector is assumed to be normalized |v|=1
            T interpolate(const lvlset::vec<T,3> in, T r0001, T r1m102, T r1m100, T r11m20, T r1m105, T r4m5138, T r1m1012, T r10m12  ) const{

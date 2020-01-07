@@ -719,6 +719,8 @@ namespace lvlset {
 
 
         const int slf_order = 1; //stencil order
+        
+        const bool use_sampling = true;
 
         MetaDataType& meta_data;
 
@@ -855,21 +857,41 @@ namespace lvlset {
                       normal_p[k] -= 2*dn;
 
                     } else{ //Central difference
+                        value_type vp=0;
+                        value_type vn=0;
+
+                        if(!use_sampling){
+                            //Default scheme
+                            normal_p[k] -= dn; //p=previous
+                            normal_n[k] += dn; //n==next
 
 
 
-                        normal_p[k] -= dn; //p=previous
-                        normal_n[k] += dn; //n==next
+                            vp=velocities.calculate_normaldependent_velocity(normal_p,material);
+                            vn=velocities.calculate_normaldependent_velocity(normal_n,material);
 
+                            normal_p[k] += dn;
+                            normal_n[k] -= dn;
+                        } 
+                        else{ //scheme with sampling 
+                            if(k==0){
+                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 1,0,0);
+                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, -1,0,0);
+                            }
+                            else if(k==1){
+                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,1,0);
+                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,-1,0);
+                            }
+                            else if(k==2){
+                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,1);
+                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,-1);
+                            } 
+                        }
 
-
-                      value_type vp=velocities.calculate_normaldependent_velocity(normal_p,material);
-                      value_type vn=velocities.calculate_normaldependent_velocity(normal_n,material);
                         //central difference
                         dv[k] = (vn - vp) / (2.0 * dn);
 
-                        normal_p[k] += dn;
-                        normal_n[k] -= dn;
+                                              
                       }
                     }
                     //determine \partial H / \partial phi_l

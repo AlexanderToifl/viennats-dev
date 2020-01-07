@@ -329,6 +329,26 @@ namespace proc {
 
           return v;
       }
+ 
+    
+      double calculate_slf_velocity(typename calc::Make3DVector<Dimensions> normal_vector, const double* coverages, const double* rates, int matnum,  bool calcConnectivities,  bool calcVisibilities, const int ix, const int iy, const int iz) const {
+          double v;
+
+          Model.CalculateSLFVelocity(
+                  v,
+                  normal_vector,
+                  coverages,
+                  rates,
+                  matnum,
+                  calcConnectivities,
+                  calcVisibilities,
+                  ix,iy,iz
+          );
+
+          return v;
+      }
+
+     
 
       //Calculate the velocity for a process which only depends on normal vector and material number.
       double calculate_normaldependent_velocity(const lvlset::vec<double,Dimensions> normal_vector,int matnum) const {
@@ -346,7 +366,26 @@ namespace proc {
           );
       }
 
+     double calculate_normaldependent_SLF_velocity(const lvlset::vec<double,Dimensions> normal_vector, int matnum, int ix, int iy, int iz) const {
+        double nv[3]={normal_vector[0],normal_vector[1],0}; //TODO more elegant solution? Models require 3D vectors.
+        if(Dimensions==3)
+          nv[2] = normal_vector[2];
+
+        double v;
+
+        return calculate_slf_velocity(
+            calc::Make3DVector<Dimensions>(nv),
+            nullptr, //Purely normal dependent models do not require coverages.
+            nullptr, //Purely normal dependent models do not require rates.
+            matnum,
+            false,
+            false,
+            ix,iy,iz
+          );
+
+        }
     };
+
 
     ///Holds information about velocities of grid points.
     template <class ModelType, int Dimensions> class VelocityClass2 {
