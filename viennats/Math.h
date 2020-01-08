@@ -16,20 +16,9 @@
 
 #include <cmath>
 #include <array>
-
-#if 0
-#include "libqhullcpp/RboxPoints.h"
-#include "libqhullcpp/QhullError.h"
-#include "libqhullcpp/Qhull.h"
-#include "libqhullcpp/QhullQh.h"
-#include "libqhullcpp/QhullFacet.h"
-#include "libqhullcpp/QhullFacetList.h"
-#include "libqhullcpp/QhullLinkedList.h"
-#include "libqhullcpp/QhullVertex.h"
-#include "libqhullcpp/QhullSet.h"
-#include "libqhullcpp/QhullVertexSet.h"
-#endif
-
+#include <chrono>
+#include <random>
+#include <fstream>
 //at for fourRateInterpolation()
 #include "LSlib/levelset.hpp"
 //#include <boost/static_assert.hpp>
@@ -1153,6 +1142,8 @@ namespace my {
                 du = (u_max-u_min)/M;
                 dphi = (phi_max-phi_min)/M;
 
+                auto t1=std::chrono::system_clock::now();
+
                 std::cout << "Started sampling of D3d rate function, M = " << M << "\n";
                 for(size_t matNum=0; matNum < mats; ++matNum){
 
@@ -1242,10 +1233,80 @@ namespace my {
                 sampleM = M;
                 std::cout << "Finished D3d sampling\n";
 
+                auto t2=std::chrono::system_clock::now();
+                std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+                std::cout << "Sampling took " << fp_ms.count() << " ms\n";
             
           }
 
+        //test function to time the effect of sampling
+           void timingTestSampling(const int N, 
+                                   const std::vector<T>& r0001,
+                                   const std::vector<T>& r1m102,
+                                   const std::vector<T>& r1m100,
+                                   const std::vector<T>& r11m20,
+                                   const std::vector<T>& r1m105,
+                                   const std::vector<T>& r4m5138,
+                                   const std::vector<T>& r1m1012,
+                                   const std::vector<T>& r10m12,
+                                   const int matNum){
+               std::vector<lvlset::vec<T,3>> nvec(N);
+               std::vector<T> interpolationResult(N);
+               std::vector<T> samplingResult(N);
 
+               std::cout << "Sampling test\n";
+
+               std::default_random_engine generator;
+               std::uniform_real_distribution<T> dist_phi(0,2*math::Pi);
+               std::uniform_real_distribution<T> dist_u(-1,1);
+
+               for(int i(0); i < N; ++i){
+                   T phi=dist_phi(generator);
+                   T u=dist_u(generator);
+
+                   T nx = sqrt(1-u*u) * cos(phi);
+                   T ny = sqrt(1-u*u) * sin(phi);
+                   T nz = u;
+
+                   nvec[i] = lvlset::vec<T,3>{nx,ny,nz};
+               }
+
+               std::cout << "\tRNG finshed\n\tStarting default interpolation run\n"; 
+               auto t1=std::chrono::system_clock::now();
+
+               for(int j(0); j < N; ++j){
+                   interpolationResult[j] = interpolate(nvec[j], r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+               }
+               
+               auto t2=std::chrono::system_clock::now();
+               std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+               std::cout << "\tDefault interpolation took " << fp_ms.count() << " ms\n";
+
+               std::cout << "\tDefault interpolation run finshed\n\tStarting sampled access run\n"; 
+               auto t3=std::chrono::system_clock::now();
+
+               for(int j(0); j < N; ++j){
+                   samplingResult[j] = interpolateSampled(nvec[j], matNum);
+               }
+               
+               auto t4=std::chrono::system_clock::now();
+               std::chrono::duration<double, std::milli> fp_ms2 = t4 - t3;
+               std::cout << "\tSampled access took " << fp_ms2.count() << " ms\n";
+
+               ofstream file("samplingTestResults.csv");
+               file << "nx, ny, nz, interpolationResult, samplingResult, absDiff, relDiff\n";
+               if(file.is_open()){
+                   for(int j(0); j < N; ++j){
+                       file << nvec[j][0] << ", " << nvec[j][1] << ", " << nvec[j][2] << ", " << interpolationResult[j] << ", " << samplingResult[j] << ", " << fabs(interpolationResult[j] - samplingResult[j]) << ", " << fabs( (interpolationResult[j] - samplingResult[j])/interpolationResult[j]) << "\n";
+                   }
+
+               }
+
+
+
+           } 
+          
           //reduce to fundamental domain, which is 0<theta<Pi/2, 0<phi<2*PI/3
            lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const {
               lvlset::vec<T,3> out = in;
@@ -1270,7 +1331,9 @@ namespace my {
 
            T interpolateSampled(const lvlset::vec<T,3> in, const int materialNum) const {
                 T u = in[2];
-                T phi = atan2(in[1],in[0]) + math::Pi;  
+                T phi = atan2(in[1],in[0]);
+                if(phi < 0)
+                   phi += 2*math::Pi;  
 
                 int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
                 int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
@@ -1279,8 +1342,11 @@ namespace my {
            }
 
            T interpolateSLFSampled(const lvlset::vec<T,3> in, const int materialNum, const int ix, const int iy, const int iz) const {
-                T u = in[2];
-                T phi = atan2(in[1],in[0]) + math::Pi;  
+                lvlset::vec<T,3> in_norm = Normalize(in);
+                T u = in_norm[2];
+                T phi = atan2(in_norm[1],in_norm[0]);
+                if(phi < 0)
+                   phi += 2*math::Pi;  
 
                 int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
                 int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
@@ -1317,11 +1383,12 @@ namespace my {
               lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
               in_fund = reduceToFundmental(in_fund);
 
+#if 0
               if(dot(in_fund,lvlset::vec<T,3>{0,0,1})/Norm(in_fund)  > 0.993){
                   return r0001;
               }
 
-
+#endif
               bool triangleFound=false;
               size_t triangleIdx = 0;
 

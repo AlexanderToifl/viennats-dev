@@ -12,7 +12,7 @@
 
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
-
+#define TIMING 0
 
 #include <cmath>
 #include <algorithm>
@@ -862,6 +862,10 @@ namespace lvlset {
 
                         if(!use_sampling){
                             //Default scheme
+#if TIMING
+                            std::cout << "Using interpolation for SLF velocities\n";
+                            auto t1=std::chrono::system_clock::now();
+#endif                      
                             normal_p[k] -= dn; //p=previous
                             normal_n[k] += dn; //n==next
 
@@ -872,20 +876,34 @@ namespace lvlset {
 
                             normal_p[k] += dn;
                             normal_n[k] -= dn;
+#if TIMING
+                            auto t2=std::chrono::system_clock::now();
+                            std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+                            std::cout << "Using interpolation for SLF velocites took " << fp_ms.count() << " ms\n";
+#endif
                         } 
                         else{ //scheme with sampling 
+#if TIMING
+                            std::cout << "Using sampled values for SLF velocities\n";
+                            auto t1=std::chrono::system_clock::now();
+#endif
                             if(k==0){
-                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 1,0,0);
-                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, -1,0,0);
+                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 1,0,0);
+                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, -1,0,0);
                             }
                             else if(k==1){
-                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,1,0);
-                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,-1,0);
+                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,1,0);
+                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,-1,0);
                             }
                             else if(k==2){
-                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,1);
-                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,-1);
+                                vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,1);
+                                vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,-1);
                             } 
+#if TIMING         
+                            auto t2=std::chrono::system_clock::now();
+                            std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+                            std::cout << "Using sampled SLF velocites took " << fp_ms.count() << " ms\n";
+#endif
                         }
 
                         //central difference

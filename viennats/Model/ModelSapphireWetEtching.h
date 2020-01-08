@@ -26,7 +26,9 @@
         class SapphireWetEtching {
 
             const double EPS = 1e-6;
+            const bool use_sampling=true;
             const long M = 100; //samples in phi and cos(theta)
+            
             lvlset::vec<double,3> directionA;
             lvlset::vec<double,3> directionC;
 
@@ -85,11 +87,14 @@
                 if (!b) msg::print_error("Failed interpreting process parameters!");
 
 
-                for(auto i : r0001)
-                    std::cout << i << "\n";
                 sapphireSymmetry.defineCoordinateSystem(directionA);
                 
-                sapphireSymmetry.sampleRateFunctions(r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,M);
+                if(use_sampling){
+                  sapphireSymmetry.sampleRateFunctions(r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,M);
+
+                  if(true)
+                      sapphireSymmetry.timingTestSampling(10000000,r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,0);
+                }
 
                 //reverse because material id is reversed w.r.t. layer id (for output)
                 /*std::reverse(r100.begin(),r100.end());
@@ -137,23 +142,12 @@
 
             lvlset::vec<double,3> nv{NormalVector[0],NormalVector[1],NormalVector[2]};
 
-            // lvlset::vec<T,3> NormalVector;
-            // NormalVector[0] = nv[0];
-            // NormalVector[1] = nv[1];
-            // if(D==3){
-            //   NormalVector[2] = nv[2];
-            // }else{
-            //   NormalVector[2] = 0;
-            // }
-
-            //TODO somehow check if sampling is provided 
 
             //Velocity using standard interpolation
-            //Velocity = -sapphireSymmetry.interpolate(nv,r0001[Material], r1m102[Material],r1m100[Material], r11m20[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material], r10m12[Material]);
-
-            //Velocity using sampling
-            Velocity = -sapphireSymmetry.interpolateSampled(nv,Material);
-            //std::cout << Velocity << "\n";
+            if(!use_sampling)
+                Velocity = -sapphireSymmetry.interpolate(nv,r0001[Material], r1m102[Material],r1m100[Material], r11m20[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material], r10m12[Material]);
+            else
+                Velocity = -sapphireSymmetry.interpolateSampled(nv,Material);
 
         }
 
@@ -178,7 +172,10 @@
                 bool visible,
                 const int ix, const int iy, const int iz) const {
 
-
+            if(!use_sampling){
+                std::cerr << "Error: trying to use sampled rates, but sampling is turned off in ModelSapphire\n";
+                exit(-1);
+            }
             if (zeroVel[Material] == true) {
                 Velocity=0;
                 return;
