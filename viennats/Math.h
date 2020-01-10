@@ -1257,6 +1257,7 @@ namespace my {
                std::cout << "Sampling test\n";
 
                std::default_random_engine generator;
+               generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
                std::uniform_real_distribution<T> dist_phi(0,2*math::Pi);
                std::uniform_real_distribution<T> dist_u(-1,1);
 

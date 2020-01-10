@@ -92,7 +92,7 @@
                 if(use_sampling){
                   sapphireSymmetry.sampleRateFunctions(r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,M);
 
-                  if(true)
+                  if(false)
                       sapphireSymmetry.timingTestSampling(10000000,r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,0);
                 }
 

@@ -13,7 +13,6 @@
    License:         MIT (X11), see file LICENSE in the base directory
 ============================================================================= */
 #define TIMING 0
-
 #include <cmath>
 #include <algorithm>
 #include <cassert>
@@ -746,7 +745,14 @@ namespace lvlset {
             assert(order > 4);
             //expand the level set function to ensure that for all active grid points the level set values of the neighbor grid points, which are necessary to calculate the derivatives are also defined
             //TODO Expansion of sparse field must depend on spatial derivative order AND  slf stencil order!
+#if TIMING
+            
+            auto t1=std::chrono::system_clock::now();
             l.expand(order*2+1);
+            auto t2=std::chrono::system_clock::now();
+            std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+            std::cout << "\tExpansion called by SLF took " << fp_ms.count() << " ms\n";
+#endif
 
         }
 
@@ -770,6 +776,19 @@ namespace lvlset {
             return 0;
           }
           else{
+
+#if TIMING
+           std::default_random_engine generator;
+           generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
+           std::uniform_real_distribution<double> dist_u(0,1);
+           double rand = dist_u(generator);
+           
+            auto tstart=std::chrono::system_clock::now();
+            auto tham=tstart;
+            auto tdissip=tstart;
+            auto tnumham=tstart;
+#endif
+
 
             const int D = LevelSetType::dimensions;
             const bool DEBUG = false;
@@ -800,13 +819,16 @@ namespace lvlset {
             hamiltonian = NormL2(center.gradient()); //|grad(phi)|
             hamiltonian *= v; //V |grad(phi)|
 
+#if TIMING
+            tham=std::chrono::system_clock::now();
+#endif
             if(DEBUG) std::cout <<"H = " << hamiltonian << std::endl;
 
             //dissipation block
             {
               std::vector< vec<value_type,D>> alphas;
               alphas.reserve(stars.size());
-
+    
               for(size_t i = 0; i < stars.size(); ++i){
 
                 index_type star_center_id  = stars[i].center().pt_id();
@@ -862,10 +884,6 @@ namespace lvlset {
 
                         if(!use_sampling){
                             //Default scheme
-#if TIMING
-                            std::cout << "Using interpolation for SLF velocities\n";
-                            auto t1=std::chrono::system_clock::now();
-#endif                      
                             normal_p[k] -= dn; //p=previous
                             normal_n[k] += dn; //n==next
 
@@ -876,17 +894,8 @@ namespace lvlset {
 
                             normal_p[k] += dn;
                             normal_n[k] -= dn;
-#if TIMING
-                            auto t2=std::chrono::system_clock::now();
-                            std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
-                            std::cout << "Using interpolation for SLF velocites took " << fp_ms.count() << " ms\n";
-#endif
                         } 
                         else{ //scheme with sampling 
-#if TIMING
-                            std::cout << "Using sampled values for SLF velocities\n";
-                            auto t1=std::chrono::system_clock::now();
-#endif
                             if(k==0){
                                 vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 1,0,0);
                                 vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, -1,0,0);
@@ -899,11 +908,6 @@ namespace lvlset {
                                 vn = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,1);
                                 vp = velocities.calculate_normaldependent_SLF_velocity(normal_n, material, 0,0,-1);
                             } 
-#if TIMING         
-                            auto t2=std::chrono::system_clock::now();
-                            std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
-                            std::cout << "Using sampled SLF velocites took " << fp_ms.count() << " ms\n";
-#endif
                         }
 
                         //central difference
@@ -950,8 +954,9 @@ if(0)
                 meta_data.expanded_pt_data.vec_values[star_center_id] = alpha;
                 meta_data.expanded_pt_data.flags[star_center_id] = true;
               }
-
-
+#if TIMING
+              tdissip=std::chrono::system_clock::now();
+#endif
               //determine max alphas for every axis
               vec<value_type,D>  maxal;
               for(int d=0; d < D; ++d)
@@ -978,6 +983,23 @@ if(0)
             if(DEBUG) std::cout << "H-D = " << hamiltonian - dissipation << std::endl;
 
             meta_data.active_pt_data.scalar_values[it.active_pt_id()] = hamiltonian;
+
+#if TIMING
+            tnumham=std::chrono::system_clock::now();
+
+
+            std::chrono::duration<double, std::milli> fp_1 = tham - tstart;
+            std::chrono::duration<double, std::milli> fp_2 = tdissip - tham;
+            std::chrono::duration<double, std::milli> fp_3 = tnumham - tdissip;
+            std::chrono::duration<double, std::milli> fp_4 = tnumham - tstart;
+            if(rand > 0.99999){
+
+                std::cout << "SLF Timing result:\n\tHnum calculation took " << fp_4.count() << " ms\n";
+                std::cout << "\tH calculation took " << fp_1.count() << " ms\n";
+                std::cout << "\talphas calculation took " << fp_2.count() << " ms\n";
+                std::cout << "\tD calculation took " << fp_3.count() << " ms\n";
+            }
+#endif
 
             return hamiltonian - dissipation;
           }
