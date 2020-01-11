@@ -748,7 +748,10 @@ namespace lvlset {
 #if TIMING
             
             auto t1=std::chrono::system_clock::now();
+#endif
             l.expand(order*2+1);
+
+#if TIMING
             auto t2=std::chrono::system_clock::now();
             std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
             std::cout << "\tExpansion called by SLF took " << fp_ms.count() << " ms\n";
@@ -841,7 +844,6 @@ namespace lvlset {
                 else {
 
                   vec<value_type,D> normal_p =  stars[i].normal_vector();
-
     	            //Check for corrupted normal
       				    if( (math::abs(normal_p[0]) < 1e-6) && (math::abs(normal_p[1]) < 1e-6) && (math::abs(normal_p[2]) < 1e-6) ){
     			             alphas.push_back(vec<value_type,D>(0.0));
