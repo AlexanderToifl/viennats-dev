@@ -1048,8 +1048,6 @@ namespace my {
     template <class T> class D3d {
 
       private:
-         static constexpr size_t INT_NUM = 9;
-         static constexpr size_t TRI_NUM = 8;
          const lvlset::vec<T,3> c3_1{0,0,1}; //3 fold rotation
          const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
          const lvlset::vec<T,3> sigma1 = a1;
@@ -1059,6 +1057,9 @@ namespace my {
 
          const T c3_1_angle = 2*math::Pi/3;
 
+#if 0  //RAMR'
+         static constexpr size_t INT_NUM = 9;
+         static constexpr size_t TRI_NUM = 8;
          //INT_NUM + 1, due to [1,0,-1,0] and [1,-1,0,0] being equivalent.
          //Both directions are required to describe the entire fundmental domain,
          // but interpolation values have to be equal
@@ -1085,6 +1086,33 @@ namespace my {
                                                                    {1, 4, 3},
                                                                    {4, 6, 5},
                                                                    } };
+#endif
+         //M1' 
+         static constexpr size_t INT_NUM = 7;
+         static constexpr size_t TRI_NUM = 6;
+         //INT_NUM + 1, due to [1,0,-1,0] and [1,-1,0,0] being equivalent.
+         //Both directions are required to describe the entire fundmental domain,
+         // but interpolation values have to be equal
+          const std::array<std::array<T,4>, INT_NUM> interpPlanesHex{ {
+                                                                  {0,0,0,1},//c direction
+                                                                  {1,-1,0,0},//m direction
+                                                                  {1,-1,0,5},//Shen 1 direction
+                                                                  {4,-5,1,38},//Shen 3 direction
+                                                                  {1,-1,0,12},//Shen 4 direction
+                                                                  {1,0,-1,5},//Shen 1' direction
+                                                                  {1,0,-1,0}//additional m direction 
+                                                                    } };
+
+
+         const std::array<std::array<size_t,3>, TRI_NUM> interpSphTri{ {
+                                                                   {3, 5, 2},
+                                                                   {4, 3, 2},
+                                                                   {5, 4, 0},
+                                                                   {3, 4, 5},
+                                                                   {2, 5, 1},
+                                                                   {1, 5, 6}
+                                                                   } };
+#
          std::array<std::array<T,4>, INT_NUM> interpDirectionsHex;
          lvlset::vec<T,3> interpVertices[INT_NUM];
 
@@ -1134,20 +1162,19 @@ namespace my {
                  interpDirectionsHex[i] = millerBravaisNormalVector(interpPlanesHex[i], ca_ratio);
                  lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,ca_ratio * c3_1));
                  interpVertices[i] = reduceToFundmental(vec);
+
+                 std::cout << interpVertices[i] << "\n";
                }
 
-               std::cout << "Angle([1 -1 0 5], [0 0 0 1]) = Angle(" << interpVertices[4] << ", " << interpVertices[0] << ") = " << Angle(interpVertices[4], interpVertices[0]) << "\n";
 
           }
 
           void sampleRateFunctions(const std::vector<T>& r0001,
-                                   const std::vector<T>& r1m102,
                                    const std::vector<T>& r1m100,
-                                   const std::vector<T>& r11m20,
                                    const std::vector<T>& r1m105,
                                    const std::vector<T>& r4m5138,
                                    const std::vector<T>& r1m1012,
-                                   const std::vector<T>& r10m12,
+                                   const std::vector<T>& r10m15,
                                    const size_t M) {
 
                 size_t mats(r0001.size());
@@ -1194,8 +1221,8 @@ namespace my {
                             T nz = u; 
 
                             T v =  interpolate(lvlset::vec<T,3>{nx,ny,nz},
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
                          
                             T DN = v * CEPS;
 
@@ -1203,31 +1230,36 @@ namespace my {
                            
                              
                             vel100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx+DN,ny,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
-
+                                        r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                         
                             
                             velm100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx-DN,ny,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
-    
+                                        r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                         
+
 
                             vel010[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny+DN,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
-                            
+                                        r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                         
+
                             vel0m10[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny-DN,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
-                            
+                                        r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                         
+
                             vel001[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz+DN}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
-                            
+                                        r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                         
+
                             vel00m1[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz-DN}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
-                        }
+                                        r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                         
+                            }
 
                     }
 
@@ -1255,13 +1287,11 @@ namespace my {
         //test function to time the effect of sampling
            void timingTestSampling(const int N, 
                                    const std::vector<T>& r0001,
-                                   const std::vector<T>& r1m102,
                                    const std::vector<T>& r1m100,
-                                   const std::vector<T>& r11m20,
                                    const std::vector<T>& r1m105,
                                    const std::vector<T>& r4m5138,
                                    const std::vector<T>& r1m1012,
-                                   const std::vector<T>& r10m12,
+                                   const std::vector<T>& r10m15,
                                    const int matNum){
                std::vector<lvlset::vec<T,3>> nvec(N);
                std::vector<T> interpolationResult(N);
@@ -1289,8 +1319,9 @@ namespace my {
                auto t1=std::chrono::system_clock::now();
 
                for(int j(0); j < N; ++j){
-                   interpolationResult[j] = interpolate(nvec[j], r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                   interpolationResult[j] = interpolate(nvec[j], r0001[matNum],r1m100[matNum],
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                         
                }
                
                auto t2=std::chrono::system_clock::now();
@@ -1390,9 +1421,9 @@ namespace my {
 
 
            //input vector is assumed to be normalized |v|=1
-           T interpolate(const lvlset::vec<T,3> in, T r0001, T r1m102, T r1m100, T r11m20, T r1m105, T r4m5138, T r1m1012, T r10m12  ) const{
+           T interpolate(const lvlset::vec<T,3> in, T r0001, T r1m100, T r1m105, T r4m5138, T r1m1012, T r10m15  ) const{
 
-              T interpValues[INT_NUM] = {r0001, r1m102, r1m100, r11m20, r1m105, r4m5138, r1m1012,r10m12, r1m100};
+              T interpValues[INT_NUM] = {r0001, r1m100, r1m105, r4m5138, r1m1012,r10m15, r1m100};
 
               lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
               in_fund = reduceToFundmental(in_fund);
