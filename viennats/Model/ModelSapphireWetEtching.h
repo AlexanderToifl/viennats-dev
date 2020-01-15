@@ -28,6 +28,10 @@
             const double EPS = 1e-6;
             const bool use_sampling=true;
             const long M = 100; //samples in phi and cos(theta)
+
+            //Sapphire lattice parameters
+            const double a = 4.785;//Angstrom
+            const double c = 12.991;//Angstrom
             
             lvlset::vec<double,3> directionA;
             lvlset::vec<double,3> directionC;
@@ -87,7 +91,7 @@
                 if (!b) msg::print_error("Failed interpreting process parameters!");
 
 
-                sapphireSymmetry.defineCoordinateSystem(directionA);
+                sapphireSymmetry.defineCoordinateSystem(directionA,c/a);
                 
                 if(use_sampling){
                   sapphireSymmetry.sampleRateFunctions(r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,M);

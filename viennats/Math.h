@@ -1014,13 +1014,12 @@ namespace my {
 
   namespace symmetry {
 
-    //c-axis orientation and a1 direction orientation can be given, a2 and a3 are rotated by 120 deg around in c-axis
-    //Default values lead to following setup:
-    //x-axis: [1 0 -1 0]
-    //y-axis: [-1 2 -1 0]
-    //z-axis: [0 0 0 1]
+
+    //Convert Miller-Bravais indices (4 entries) to Cartesian vector
+    //a1 ... base vector in c plane
+    //c ... base vector along c direction
+    //NOTE: Magnitude of a1 and c define c/a ratio of hexagonal/trigonal crystal system
     template<class T>
-    //lvlset::vec<T,3> millerBravaisToCartesian(const std::array<T,4>& hex, lvlset::vec<T,3>& a1 = {sqrt(3)*0.5, -0.5, 0}, lvlset::vec<T,3>& c = {0, 0, 1} ){
     lvlset::vec<T,3> millerBravaisToCartesian(const std::array<T,4>& hex, const lvlset::vec<T,3>& a1, const lvlset::vec<T,3>& c){
 
       lvlset::vec<T,3> a2, a3;
@@ -1036,6 +1035,14 @@ namespace my {
       return hex[0] * a1 + hex[1] * a2 + hex[2] * a3 + hex[3] * c;
     }
 
+    //calculate normal on a plane (Miller Bravais) given by hex for a hexagonal system with lattice parameter ratio c/a = ca_ratio
+    template<class T>
+    std::array<T,4> millerBravaisNormalVector(const std::array<T,4>& hex, const T ca_ratio){
+      T lastEntry = 1.5*hex[3]/(ca_ratio*ca_ratio);
+
+     return std::array<T,4>{hex[0],hex[1],-hex[0]-hex[1],lastEntry}; 
+    }
+
 
     //Trigonal symmetry for Sapphire
     template <class T> class D3d {
@@ -1047,6 +1054,7 @@ namespace my {
          const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
          const lvlset::vec<T,3> sigma1 = a1;
 
+
          //NB. angle between a1 and sigma1 is 90 deg (ensured by constructor)
 
          const T c3_1_angle = 2*math::Pi/3;
@@ -1054,7 +1062,7 @@ namespace my {
          //INT_NUM + 1, due to [1,0,-1,0] and [1,-1,0,0] being equivalent.
          //Both directions are required to describe the entire fundmental domain,
          // but interpolation values have to be equal
-          const std::array<std::array<T,4>, INT_NUM> interpDirectionsHex{ {
+          const std::array<std::array<T,4>, INT_NUM> interpPlanesHex{ {
                                                                   {0,0,0,1},//c direction
                                                                   {1,-1,0,2},//r direction
                                                                   {1,-1,0,0},//m direction
@@ -1068,19 +1076,20 @@ namespace my {
 
 
          const std::array<std::array<size_t,3>, TRI_NUM> interpSphTri{ {
-                                                                   {4, 7, 1},
-                                                                   {1, 3, 2},
-                                                                   {3, 7, 8},
-                                                                   {7, 3, 1},
-                                                                   {7, 5, 0},
-                                                                   {4, 5, 7},
                                                                    {5, 6, 0},
-                                                                   {6, 5, 4},
+                                                                   {3, 7, 8},
+                                                                   {7, 3, 5},
+                                                                   {7, 5, 0},
+                                                                   {1, 3, 2},
+                                                                   {3, 4, 5},
+                                                                   {1, 4, 3},
+                                                                   {4, 6, 5},
                                                                    } };
-
+         std::array<std::array<T,4>, INT_NUM> interpDirectionsHex;
          lvlset::vec<T,3> interpVertices[INT_NUM];
 
          T basalAngle = 0; //angle between user defined a1 and a1{sqrt(3)*0.5, -0.5, 0}
+         T ca_ratio = 1; //ratio between lattice parameters c and a, this depends on the material
 
 
          //sampling arrays
@@ -1108,23 +1117,27 @@ namespace my {
          const T CEPS = std::cbrt(std::numeric_limits<T>::epsilon());
       public:
 
-        //constructor
-        //Default values result in
-        // x-axis: [1 0 -1 0]
-        // y-axis: [-1 2 -1 0]
-        // z-axis: [0 0 0 1]
-        //and mirror plane along [0 1 -1 0]
+          //in current status, defineCoordinateSystem HAS TO BE called in order to guanrantee meaningful state of object
           D3d(){
-               for(size_t i=0; i < INT_NUM; ++i){
-                 lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,c3_1));
-                 interpVertices[i] = reduceToFundmental(vec);
-               }
           }
 
-          //NOTE c direction coordinate rotation is not implemented atm
-          void defineCoordinateSystem(const lvlset::vec<T,3>&  a){
+          //a ... normalized vector in c plane
+          //ca ... c/a lattice parameter ratio 
+          void defineCoordinateSystem(const lvlset::vec<T,3>&  a, const T ca ){
               basalAngle = lvlset::SignedAngle(a, a1,c3_1);
-              std::cout << "a = " << a << ", a1 = " << a1 << ", c3_1 = " << c3_1 << ", Basal angle = " << basalAngle << "\n";
+              ca_ratio = ca;
+              std::cout << "a (user specified system)= " << a << ", a1 (internal system)= " << a1 << ", c3_1 (internal system)= " << c3_1 << ", Basal angle = " << basalAngle << ", c/a = " << ca_ratio << "\n";
+
+              
+              //Set interpolation vectors again with new coordinate system 
+              for(size_t i=0; i < INT_NUM; ++i){
+                 interpDirectionsHex[i] = millerBravaisNormalVector(interpPlanesHex[i], ca_ratio);
+                 lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,ca_ratio * c3_1));
+                 interpVertices[i] = reduceToFundmental(vec);
+               }
+
+               std::cout << "Angle([1 -1 0 5], [0 0 0 1]) = Angle(" << interpVertices[4] << ", " << interpVertices[0] << ") = " << Angle(interpVertices[4], interpVertices[0]) << "\n";
+
           }
 
           void sampleRateFunctions(const std::vector<T>& r0001,
