@@ -1147,7 +1147,7 @@ namespace my {
                                    const std::vector<T>& r1m105,
                                    const std::vector<T>& r4m5138,
                                    const std::vector<T>& r1m1012,
-                                   const std::vector<T>& r10m12,
+                                   const std::vector<T>& r10m15,
                                    const size_t M) {
 
                 size_t mats(r0001.size());
@@ -1195,7 +1195,7 @@ namespace my {
 
                             T v =  interpolate(lvlset::vec<T,3>{nx,ny,nz},
                                         r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
                          
                             T DN = v * CEPS;
 
@@ -1204,29 +1204,29 @@ namespace my {
                              
                             vel100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx+DN,ny,nz}),
                                         r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
 
                             
                             velm100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx-DN,ny,nz}),
                                         r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
     
 
                             vel010[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny+DN,nz}),
                                         r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
                             
                             vel0m10[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny-DN,nz}),
                                         r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
                             
                             vel001[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz+DN}),
                                         r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
                             
                             vel00m1[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz-DN}),
                                         r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
                         }
 
                     }
@@ -1261,7 +1261,7 @@ namespace my {
                                    const std::vector<T>& r1m105,
                                    const std::vector<T>& r4m5138,
                                    const std::vector<T>& r1m1012,
-                                   const std::vector<T>& r10m12,
+                                   const std::vector<T>& r10m15,
                                    const int matNum){
                std::vector<lvlset::vec<T,3>> nvec(N);
                std::vector<T> interpolationResult(N);
@@ -1290,7 +1290,7 @@ namespace my {
 
                for(int j(0); j < N; ++j){
                    interpolationResult[j] = interpolate(nvec[j], r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m12[matNum]);
+                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
                }
                
                auto t2=std::chrono::system_clock::now();
@@ -1390,9 +1390,9 @@ namespace my {
 
 
            //input vector is assumed to be normalized |v|=1
-           T interpolate(const lvlset::vec<T,3> in, T r0001, T r1m102, T r1m100, T r11m20, T r1m105, T r4m5138, T r1m1012, T r10m12  ) const{
+           T interpolate(const lvlset::vec<T,3> in, T r0001, T r1m102, T r1m100, T r11m20, T r1m105, T r4m5138, T r1m1012, T r10m15  ) const{
 
-              T interpValues[INT_NUM] = {r0001, r1m102, r1m100, r11m20, r1m105, r4m5138, r1m1012,r10m12, r1m100};
+              T interpValues[INT_NUM] = {r0001, r1m102, r1m100, r11m20, r1m105, r4m5138, r1m1012,r10m15, r1m100};
 
               lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
               in_fund = reduceToFundmental(in_fund);

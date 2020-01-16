@@ -44,7 +44,7 @@
             std::vector<double> r1m105;
             std::vector<double> r4m5138;
             std::vector<double> r1m1012;
-            std::vector<double> r10m12;
+            std::vector<double> r10m15;
 
             std::vector<bool> zeroVel;
 
@@ -84,7 +84,7 @@
                               (str_p("rate1m105")  >>  '='  >>  '{' >> ( real_p[push_back_a(r1m105)]  % ',')>> '}'  >> ';') |
                               (str_p("rate4m5138")  >>  '='  >>  '{' >> ( real_p[push_back_a(r4m5138)]  % ',')>> '}'  >> ';') |
                               (str_p("rate1m1012")  >>  '='  >>  '{' >> ( real_p[push_back_a(r1m1012)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate10m12")  >>  '='  >>  '{' >> ( real_p[push_back_a(r10m12)]  % ',')>> '}'  >> ';') 
+                              (str_p("rate10m15")  >>  '='  >>  '{' >> ( real_p[push_back_a(r10m15)]  % ',')>> '}'  >> ';') 
                         ),
                         space_p | comment_p("//") | comment_p("/*", "*/")).full;
 
@@ -94,10 +94,10 @@
                 sapphireSymmetry.defineCoordinateSystem(directionA,c/a);
                 
                 if(use_sampling){
-                  sapphireSymmetry.sampleRateFunctions(r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,M);
+                  sapphireSymmetry.sampleRateFunctions(r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m15,M);
 
                   if(false)
-                      sapphireSymmetry.timingTestSampling(10000000,r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m12,0);
+                      sapphireSymmetry.timingTestSampling(10000000,r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m15,0);
                 }
 
                 //reverse because material id is reversed w.r.t. layer id (for output)
@@ -116,7 +116,7 @@
                           if(fabs(r1m105[i]) < EPS)
                             if(fabs(r4m5138[i]) < EPS)
                               if(fabs(r1m1012[i]) < EPS)
-                                if(fabs(r10m12[i]) < EPS)
+                                if(fabs(r10m15[i]) < EPS)
                                     zeroVel[i]=true;
             }
 
@@ -149,7 +149,7 @@
 
             //Velocity using standard interpolation
             if(!use_sampling)
-                Velocity = -sapphireSymmetry.interpolate(nv,r0001[Material], r1m102[Material],r1m100[Material], r11m20[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material], r10m12[Material]);
+                Velocity = -sapphireSymmetry.interpolate(nv,r0001[Material], r1m102[Material],r1m100[Material], r11m20[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material], r10m15[Material]);
             else
                 Velocity = -sapphireSymmetry.interpolateSampled(nv,Material);
 
