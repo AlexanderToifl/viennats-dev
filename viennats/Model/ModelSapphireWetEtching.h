@@ -27,7 +27,7 @@
 
             const double EPS = 1e-6;
             const bool use_sampling=true;
-            const long M = 100; //samples in phi and cos(theta)
+            const long M = 200; //samples in phi and cos(theta)
 
             //Sapphire lattice parameters
             const double a = 4.785;//Angstrom
@@ -36,16 +36,9 @@
             lvlset::vec<double,3> directionA;
             lvlset::vec<double,3> directionC;
 
-
-            std::vector<double> r0001;
-            std::vector<double> r1m102;
-            std::vector<double> r1m100;
-            std::vector<double> r11m20;
-            std::vector<double> r1m105;
-            std::vector<double> r4m5138;
-            std::vector<double> r1m1012;
-            std::vector<double> r10m15;
-
+            std::vector<std::vector<double>> planes; //planes given by experiment
+            std::vector<std::vector<double>> rates; //one vector per material number, stores rates for planes given by experiment
+            
             std::vector<bool> zeroVel;
 
             my::symmetry::D3d<double> sapphireSymmetry;
@@ -69,35 +62,59 @@
             SapphireWetEtching(const std::string & Parameters) {
                 using namespace boost::spirit::classic;
                 using namespace parser_actors;
-
+                
+                std::cout << Parameters;
 
                 bool b = parse(
                         Parameters.begin(),
                         Parameters.end(),
                         *(
                               (str_p("directionA")  >> '='  >> '{' >> real_p[assign_a(directionA[0])]  >> "," >> real_p[assign_a(directionA[1])] >> "," >> real_p[assign_a(directionA[2])] >> '}' >> ';') |
-                              (str_p("directionC")  >> '='  >> '{' >> real_p[assign_a(directionC[0])]  >> "," >> real_p[assign_a(directionC[1])] >> "," >> real_p[assign_a(directionC[2])] >> '}' >> ';') |
-                              (str_p("rate0001")  >>  '='  >>  '{' >> ( real_p[push_back_a(r0001)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate1m102")  >>  '='  >>  '{' >> ( real_p[push_back_a(r1m102)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate1m100")  >>  '='  >>  '{' >> ( real_p[push_back_a(r1m100)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate11m20")  >>  '='  >>  '{' >> ( real_p[push_back_a(r11m20)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate1m105")  >>  '='  >>  '{' >> ( real_p[push_back_a(r1m105)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate4m5138")  >>  '='  >>  '{' >> ( real_p[push_back_a(r4m5138)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate1m1012")  >>  '='  >>  '{' >> ( real_p[push_back_a(r1m1012)]  % ',')>> '}'  >> ';') |
-                              (str_p("rate10m15")  >>  '='  >>  '{' >> ( real_p[push_back_a(r10m15)]  % ',')>> '}'  >> ';') 
+                              (str_p("directionC")  >> '='  >> '{' >> real_p[assign_a(directionC[0])]  >> "," >> real_p[assign_a(directionC[1])] >> "," >> real_p[assign_a(directionC[2])] >> '}' >> ';') 
                         ),
                         space_p | comment_p("//") | comment_p("/*", "*/")).full;
 
-                if (!b) msg::print_error("Failed interpreting process parameters!");
+                //if (!b) msg::print_error("Failed interpreting process parameters!");
+
+                //Parse planes= and rates= using a dirty handwritten parser
+                std::vector<std::vector<double>> planes;
+                const int EntryNum = 4;
+                std::string planeStr="planes=";
+                parseListOfList(Parameters,planeStr,EntryNum,planes);
+               
+                std::cout << "Parsed planes:\n"; 
+                for(auto p : planes){
+                    for(auto v : p){
+                        std::cout << v << " ";
+                    }
+
+                    std::cout << "\n";
+                }
+
+
+                std::vector<std::vector<double>> rates;
+                int ratesEntryNum = planes.size();
+                std::string rateStr="rates=";
+                parseListOfList(Parameters,rateStr,ratesEntryNum,rates);
+                
+                std::cout << "Parsed rates:\n"; 
+                for(auto p : rates){
+                    for(auto v : p){
+                        std::cout << v << " ";
+                    }
+
+                    std::cout << "\n";
+                }
 
 
                 sapphireSymmetry.defineCoordinateSystem(directionA,c/a);
+                sapphireSymmetry.defineRateFunction(planes,rates);
                 
                 if(use_sampling){
-                  sapphireSymmetry.sampleRateFunctions(r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m15,M);
+                  sapphireSymmetry.sampleRateFunctions(M);
 
-                  if(false)
-                      sapphireSymmetry.timingTestSampling(10000000,r0001,r1m102,r1m100,r11m20,r1m105,r4m5138,r1m1012,r10m15,0);
+                    if(false)
+                        sapphireSymmetry.timingTestSampling(10000000, 0 );
                 }
 
                 //reverse because material id is reversed w.r.t. layer id (for output)
@@ -107,19 +124,21 @@
             std::reverse(r311.begin(),r311.end());*/
 
             // find materials with no growth in any direction and store in zeroVel
-            for(unsigned int i=0; i < r0001.size(); ++i){
-              zeroVel.push_back(false);
-              if(fabs(r0001[i]) < EPS)
-                if(fabs(r1m102[i]) < EPS)
-                  if(fabs(r1m100[i]) < EPS)
-                      if(fabs(r11m20[i]) < EPS)
-                          if(fabs(r1m105[i]) < EPS)
-                            if(fabs(r4m5138[i]) < EPS)
-                              if(fabs(r1m1012[i]) < EPS)
-                                if(fabs(r10m15[i]) < EPS)
-                                    zeroVel[i]=true;
+#if 0
+            for(unsigned int i=0; i < rC.size(); ++i){
+                zeroVel.push_back(false);
+              if(fabs(rC[i]) < EPS)
+                if(fabs(rR[i]) < EPS)
+                  if(fabs(rM[i]) < EPS)
+                      if(fabs(rO[i]) < EPS)
+                          if(fabs(r1[i]) < EPS)
+                            if(fabs(r3[i]) < EPS)
+                              if(fabs(r4[i]) < EPS)
+                                if(fabs(r11[i]) < EPS)
+                                    if(fabs(rV[i]) < EPS)
+                                        zeroVel[i]=true;
             }
-
+#endif
 
         }
 
@@ -138,21 +157,19 @@
                 bool connected,
                 bool visible) const {
 
-
+#if 0
             if (zeroVel[Material] == true) {
                 Velocity=0;
                 return;
             }
-
+#endif
             lvlset::vec<double,3> nv{NormalVector[0],NormalVector[1],NormalVector[2]};
-
 
             //Velocity using standard interpolation
             if(!use_sampling)
-                Velocity = -sapphireSymmetry.interpolate(nv,r0001[Material], r1m102[Material],r1m100[Material], r11m20[Material], r1m105[Material], r4m5138[Material],  r1m1012[Material], r10m15[Material]);
+                Velocity = -sapphireSymmetry.interpolate(nv,Material);
             else
                 Velocity = -sapphireSymmetry.interpolateSampled(nv,Material);
-
         }
 
 		template<class VecType>
@@ -180,11 +197,12 @@
                 std::cerr << "Error: trying to use sampled rates, but sampling is turned off in ModelSapphire\n";
                 exit(-1);
             }
+#if 0
             if (zeroVel[Material] == true) {
                 Velocity=0;
                 return;
             }
-
+#endif
             lvlset::vec<double,3> nv{NormalVector[0],NormalVector[1],NormalVector[2]};
 
             Velocity = -sapphireSymmetry.interpolateSLFSampled(nv,Material,ix,iy,iz);
@@ -212,6 +230,53 @@
 //                            int D,
 //                            double dot // dot product between the incoming particle direction and the normal vector
                             ) {}
+
+        void parseListOfList(const std::string in, const std::string quantityName, const int EntryNum, std::vector<std::vector<double>>& parsed){
+        
+
+           
+            std::cout << " ---- '" << in << "' ----\n";
+            auto pos1 = in.find(quantityName);
+            auto pos2 = in.find(";", pos1);
+
+            std::string input = in.substr(pos1+quantityName.size(),pos2-pos1-quantityName.size());
+            
+                
+            std::cout << " ---- '" << input << "' ----\n";
+
+            int state = 0;
+
+            for(std::size_t i=0; i < input.size(); ++i){
+                std::cout << "state " << state << ",character = " << input[i] << "\n";
+                
+                
+                if(state == 2)
+                { 
+                   std::vector<double> arr(EntryNum); 
+                   for(std::size_t j = 0; j < EntryNum; ++j){
+                        
+                        std::cout << "state " << state << ",character = " << input[i] << "\n";
+                       auto commaPos = (j != EntryNum - 1) ? input.find(",",i) : input.find("}",i);
+                       auto sub = input.substr(i,commaPos-i);
+                       std::cout << sub << "\n";
+                       double entry = std::stod(sub);
+                       std::cout << "entry = " << entry << "\n"; 
+                       arr[j]=entry;
+                       i = commaPos + 1;
+                   }
+
+                   parsed.push_back(arr);
+                   state = 1;               
+                }
+
+                
+                if(state ==1 && input[i] == '{')
+                    state = 2;
+                if(state == 0 && input[i] == '{')
+                   state = 1;
+            }
+        }
+
     };
 
 //    const unsigned int SapphireWetEtching::NumberOfParticleClusters[ConstantRates::NumberOfParticleTypes]={};

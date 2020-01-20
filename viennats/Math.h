@@ -23,6 +23,9 @@
 #include "LSlib/levelset.hpp"
 //#include <boost/static_assert.hpp>
 
+//delaunator
+#include <delaunator.hpp>
+#include <cstdio>
 ///Namespace for all custom mathematical and statistical tools.
 namespace my {
   ///Includes mathematical functions like equation solvers, root finders and vector arithmetic.
@@ -1009,6 +1012,17 @@ namespace my {
        return result;
      }
 
+    //Stereographic projection, projection pole is SOUTH pole
+    template<class T>
+    lvlset::vec<T,2> stereographicToPlane(const lvlset::vec<T,3>& v){
+        return lvlset::vec<T,2>{2*v[0] / (1 + v[2]),2*v[1] / (1 + v[2]) };
+    }
+
+    template<class T>
+    lvlset::vec<T,3> stereographicToSphere(const lvlset::vec<T,2>& v){
+        T s = 4/( v[0]*v[0] + v[1]*v[1] + 4);
+        return lvlset::vec<T,3>{s*v[0], s*v[1], 2*s - 1};
+    }
 
   }
 
@@ -1048,8 +1062,6 @@ namespace my {
     template <class T> class D3d {
 
       private:
-         static constexpr size_t INT_NUM = 9;
-         static constexpr size_t TRI_NUM = 8;
          const lvlset::vec<T,3> c3_1{0,0,1}; //3 fold rotation
          const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
          const lvlset::vec<T,3> sigma1 = a1;
@@ -1062,32 +1074,40 @@ namespace my {
          //INT_NUM + 1, due to [1,0,-1,0] and [1,-1,0,0] being equivalent.
          //Both directions are required to describe the entire fundmental domain,
          // but interpolation values have to be equal
-          const std::array<std::array<T,4>, INT_NUM> interpPlanesHex{ {
-                                                                  {0,0,0,1},//c direction
-                                                                  {1,-1,0,2},//r direction
-                                                                  {1,-1,0,0},//m direction
-                                                                  {1,1,-2,0},//a direction
-                                                                  {1,-1,0,5},//Shen 1 direction
-                                                                  {4,-5,1,38},//Shen 3 direction
-                                                                  {1,-1,0,12},//Shen 4 direction
-                                                                  {1,0,-1,2},//r' direction (=r in hex, but not in trigonal)
-                                                                  {1,0,-1,0}//additional m direction 
-                                                                    } };
+         std::vector<std::array<T,4>> interpPlanesHex;
+         const std::array<T,4> MM_plane{1,0,-1,0};//additional m direction 
+          
+//          { {
+//                                                                  {0,0,0,1},//c direction
+//                                                                  {1,-1,0,2},//r direction
+//                                                                  {1,-1,0,0},//m direction
+//                                                                  {1,-1,0,5},//Shen 1 direction
+//                                                                  {4,-5,1,38},//Shen 3 direction
+//                                                                  {1,-1,0,12},//Shen 4 direction
+//                                                                  {1,0,-1,5},//11 direction
+//                                                                  {1,-1,0,38},//O direction
+//                                                                  {1,1,-2,38},//V direction
+//                                                                  {1,0,-1,0}//additional m direction 
+//                                                                    } };
+//
 
-
-         const std::array<std::array<size_t,3>, TRI_NUM> interpSphTri{ {
-                                                                   {5, 6, 0},
-                                                                   {3, 7, 8},
-                                                                   {7, 3, 5},
-                                                                   {7, 5, 0},
-                                                                   {1, 3, 2},
-                                                                   {3, 4, 5},
-                                                                   {1, 4, 3},
-                                                                   {4, 6, 5},
-                                                                   } };
-         std::array<std::array<T,4>, INT_NUM> interpDirectionsHex;
-         lvlset::vec<T,3> interpVertices[INT_NUM];
-
+         std::vector<std::array<size_t,3>> interpSphTri;
+       //  { {
+       //                                                            {1, 2, 9},
+       //                                                            {2, 6, 9},
+       //                                                            {3, 6, 2},
+       //                                                            {3, 4, 6},
+       //                                                            {5, 4, 3},
+       //                                                            {6, 7, 0},
+       //                                                            {4, 7, 6},
+       //                                                            {5, 7, 4},
+       //                                                            {7, 8, 0},
+       //                                                            {8, 7, 5},
+       //                                                            } };
+         std::vector<std::array<T,4>> interpDirectionsHex;
+         std::vector<lvlset::vec<T,3>> interpVertices;
+         std::vector<std::vector<T>> interpRates; //rate vector for every material
+         
          T basalAngle = 0; //angle between user defined a1 and a1{sqrt(3)*0.5, -0.5, 0}
          T ca_ratio = 1; //ratio between lattice parameters c and a, this depends on the material
 
@@ -1124,33 +1144,127 @@ namespace my {
           //a ... normalized vector in c plane
           //ca ... c/a lattice parameter ratio 
           void defineCoordinateSystem(const lvlset::vec<T,3>&  a, const T ca ){
+
               basalAngle = lvlset::SignedAngle(a, a1,c3_1);
               ca_ratio = ca;
               std::cout << "a (user specified system)= " << a << ", a1 (internal system)= " << a1 << ", c3_1 (internal system)= " << c3_1 << ", Basal angle = " << basalAngle << ", c/a = " << ca_ratio << "\n";
 
               
-              //Set interpolation vectors again with new coordinate system 
-              for(size_t i=0; i < INT_NUM; ++i){
-                 interpDirectionsHex[i] = millerBravaisNormalVector(interpPlanesHex[i], ca_ratio);
-                 lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,ca_ratio * c3_1));
-                 interpVertices[i] = reduceToFundmental(vec);
-               }
+            }
 
-               std::cout << "Angle([1 -1 0 5], [0 0 0 1]) = Angle(" << interpVertices[4] << ", " << interpVertices[0] << ") = " << Angle(interpVertices[4], interpVertices[0]) << "\n";
+          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates){
+             
+             size_t mplane_index=planes.size()+1; 
+
+              for(size_t i = 0; i < planes.size(); ++i){
+                  if(planes[i] == std::vector<T>{1, -1, 0, 0})
+                      mplane_index=i;
+                      
+                  interpPlanesHex.push_back(std::array<T,4>{planes[i][0],planes[i][1],planes[i][2],planes[i][3]});
+              }
+
+              if(mplane_index > planes.size()){
+                  std::cout << "Error: M plane not given\n";
+                  exit(0);
+              }
+
+
+
+              interpPlanesHex.push_back(MM_plane);//M' plane is required
+
+              //TODO check for C and M plane
+
+              interpRates = rates;
+              for(size_t m=0; m < rates.size(); ++m){
+                  interpRates[m].push_back(rates[m][mplane_index]);
+              }
+
+
+              //Set interpolation vectors again with new coordinate system 
+              for(size_t i=0; i < interpPlanesHex.size() ; ++i){
+                  interpDirectionsHex.push_back( millerBravaisNormalVector(interpPlanesHex[i], ca_ratio));
+                  lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,ca_ratio * c3_1));
+                  interpVertices.push_back(reduceToFundmental(vec));
+              }
+
+              // std::cout << "Angle([1 -1 0 5], [0 0 0 1]) = Angle(" << interpVertices[4] << ", " << interpVertices[0] << ") = " << Angle(interpVertices[4], interpVertices[0]) << "\n";
+
+              //Triangulate interpVertices
+              //
+              //Stereographic projection
+              /* x0, y0, x1, y1, ... */
+              std::vector<T> stereoPlaneVertices;
+              
+              for(size_t i=0; i < interpVertices.size(); ++i)
+              {
+                  auto sp =  my::math::stereographicToPlane(interpVertices[i]);
+                  stereoPlaneVertices.push_back(sp[0]);
+                  stereoPlaneVertices.push_back(sp[1]);
+              }
+
+              std::cout << "stereoPlaneVertices:\n";
+              for( auto s : stereoPlaneVertices){
+                  std::cout << s << "\n";
+              }
+              
+               //triangulation happens here
+              delaunator::Delaunator d(stereoPlaneVertices);
+              for(std::size_t i = 0; i < d.triangles.size(); i+=3) {
+                          printf(
+                              "Triangle points: [[%f, %f], [%f, %f], [%f, %f]]\n",
+                              d.coords[2 * d.triangles[i]],        //tx0
+                              d.coords[2 * d.triangles[i] + 1],    //ty0
+                              d.coords[2 * d.triangles[i + 1]],    //tx1
+                              d.coords[2 * d.triangles[i + 1] + 1],//ty1
+                              d.coords[2 * d.triangles[i + 2]],    //tx2
+                              d.coords[2 * d.triangles[i + 2] + 1] //ty2
+                              );
+
+                          
+                              }
+
+              //build interpSphTri based on Delaunator result
+              for(size_t i = 0; i < d.triangles.size(); i+=3){
+                  T tx0 =  d.coords[2 * d.triangles[i]];        //tx0
+                  T ty0 = d.coords[2 * d.triangles[i] + 1];    //ty0
+                  T tx1 = d.coords[2 * d.triangles[i + 1]];    //tx1
+                  T ty1 =d.coords[2 * d.triangles[i + 1] + 1];//ty1
+                  T tx2 = d.coords[2 * d.triangles[i + 2]];    //tx2
+                  T ty2 = d.coords[2 * d.triangles[i + 2] + 1];//ty2
+
+                  T area = 0.5*std::fabs( tx0*ty1 - tx0*ty2 - tx1*ty0 + tx1*ty2 + tx2*ty0 -tx2*ty1 ); 
+                  std::cout << "area = " << area << "\n";
+
+                  if(area > 1e-6){
+                      interpSphTri.push_back(std::array<size_t,3>{d.triangles[i],d.triangles[i+1], d.triangles[i+2]});
+                  }
+              }
+
+              std::cout << "size interpSphTri = " << interpSphTri.size() << ", size interpVertices = " << interpVertices.size() << "\n";
+
+              std::cout << "interpSphTri:\n";
+
+              for(auto in : interpSphTri){
+                  for(auto e : in){
+                      std::cout << e << " ";
+                  }
+                  std::cout << "\n";
+              }
+              std::cout << "\n";
+
+              std::cout << "interpRates[0]:\n";
+              for(auto r : interpRates[0])
+                  std::cout << r << " ";
+
+              std::cout << "\n";
+
 
           }
 
-          void sampleRateFunctions(const std::vector<T>& r0001,
-                                   const std::vector<T>& r1m102,
-                                   const std::vector<T>& r1m100,
-                                   const std::vector<T>& r11m20,
-                                   const std::vector<T>& r1m105,
-                                   const std::vector<T>& r4m5138,
-                                   const std::vector<T>& r1m1012,
-                                   const std::vector<T>& r10m15,
-                                   const size_t M) {
+          void sampleRateFunctions(const size_t M) {
 
-                size_t mats(r0001.size());
+
+                size_t mats(interpRates.size());
 
                 du = (u_max-u_min)/M;
                 dphi = (phi_max-phi_min)/M;
@@ -1193,40 +1307,26 @@ namespace my {
                             T ny = sqrt(1-u*u)*sin(phi);
                             T nz = u; 
 
-                            T v =  interpolate(lvlset::vec<T,3>{nx,ny,nz},
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
-                         
+                            T v =  interpolate(lvlset::vec<T,3>{nx,ny,nz},matNum);                         
                             T DN = v * CEPS;
 
                             vel[i][j] = v;
                            
                              
-                            vel100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx+DN,ny,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                            vel100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx+DN,ny,nz}), matNum);
+                                        
 
                             
-                            velm100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx-DN,ny,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                            velm100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx-DN,ny,nz}), matNum);
     
 
-                            vel010[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny+DN,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                            vel010[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny+DN,nz}), matNum);
                             
-                            vel0m10[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny-DN,nz}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                            vel0m10[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny-DN,nz}), matNum);
                             
-                            vel001[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz+DN}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                            vel001[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz+DN}), matNum);
                             
-                            vel00m1[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz-DN}),
-                                        r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                            vel00m1[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz-DN}), matNum);
                         }
 
                     }
@@ -1249,20 +1349,47 @@ namespace my {
                 auto t2=std::chrono::system_clock::now();
                 std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
                 std::cout << "Sampling took " << fp_ms.count() << " ms\n";
-            
-          }
+           
 
+
+                int N = 100000;
+                std::default_random_engine generator;
+                generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
+                std::uniform_real_distribution<T> dist_phi(0,2*math::Pi);
+                std::uniform_real_distribution<T> dist_u(-1,1);
+
+                std::vector<lvlset::vec<T,3>> nvec(N);
+                std::vector<T> interpolationResult(N);
+ 
+                for(int i(0); i < N; ++i){
+                    T phi=dist_phi(generator);
+                    T u=dist_u(generator);
+ 
+                    T nx = sqrt(1-u*u) * cos(phi);
+                    T ny = sqrt(1-u*u) * sin(phi);
+                    T nz = u;
+ 
+                    nvec[i] = lvlset::vec<T,3>{nx,ny,nz};
+                }
+                for(int j(0); j < N; ++j){
+                    interpolationResult[j] = interpolateSampled(nvec[j], 0);
+                }
+                
+
+                ofstream file("rateFunction.XYZ");
+                file << "nx,ny,nz,interpolationResult\n";
+                if(file.is_open()){
+                    for(int j(0); j < N; ++j){
+                        file << nvec[j][0] << "," << nvec[j][1] << "," << nvec[j][2] << "," << interpolationResult[j]<< "\n";
+                    }
+ 
+                }
+           }
+ 
         //test function to time the effect of sampling
            void timingTestSampling(const int N, 
-                                   const std::vector<T>& r0001,
-                                   const std::vector<T>& r1m102,
-                                   const std::vector<T>& r1m100,
-                                   const std::vector<T>& r11m20,
-                                   const std::vector<T>& r1m105,
-                                   const std::vector<T>& r4m5138,
-                                   const std::vector<T>& r1m1012,
-                                   const std::vector<T>& r10m15,
-                                   const int matNum){
+                                  const int matNum){
+               
                std::vector<lvlset::vec<T,3>> nvec(N);
                std::vector<T> interpolationResult(N);
                std::vector<T> samplingResult(N);
@@ -1289,8 +1416,7 @@ namespace my {
                auto t1=std::chrono::system_clock::now();
 
                for(int j(0); j < N; ++j){
-                   interpolationResult[j] = interpolate(nvec[j], r0001[matNum], r1m102[matNum], r1m100[matNum], r11m20[matNum],
-                                        r1m105[matNum], r4m5138[matNum], r1m1012[matNum], r10m15[matNum]);
+                   interpolationResult[j] = interpolate(nvec[j], matNum);
                }
                
                auto t2=std::chrono::system_clock::now();
@@ -1316,7 +1442,6 @@ namespace my {
                    }
 
                }
-
 
 
            } 
@@ -1390,26 +1515,24 @@ namespace my {
 
 
            //input vector is assumed to be normalized |v|=1
-           T interpolate(const lvlset::vec<T,3> in, T r0001, T r1m102, T r1m100, T r11m20, T r1m105, T r4m5138, T r1m1012, T r10m15  ) const{
-
-              T interpValues[INT_NUM] = {r0001, r1m102, r1m100, r11m20, r1m105, r4m5138, r1m1012,r10m15, r1m100};
+           T interpolate(const lvlset::vec<T,3> in, const int materialNum) const{
 
               lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
               in_fund = reduceToFundmental(in_fund);
 
 #if 0
               if(dot(in_fund,lvlset::vec<T,3>{0,0,1})/Norm(in_fund)  > 0.993){
-                  return r0001;
+                  return rC;
               }
 
 #endif
               bool triangleFound=false;
               size_t triangleIdx = 0;
 
-              for( ; triangleIdx < TRI_NUM; ++triangleIdx){
-                if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
+              for( ; triangleIdx < interpSphTri.size(); ++triangleIdx){
+                if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
                                                         interpVertices[interpSphTri[triangleIdx][1]],
-                                                        interpVertices[interpSphTri[triangleIdx][2]])){
+                                                        interpVertices[interpSphTri[triangleIdx][0]])){
 
                     triangleFound=true;
                     break;
@@ -1422,14 +1545,14 @@ namespace my {
                 exit(-1);
               }
 
-              lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][0]],
+              lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
                                                                        interpVertices[interpSphTri[triangleIdx][1]],
-                                                                       interpVertices[interpSphTri[triangleIdx][2]]);
+                                                                       interpVertices[interpSphTri[triangleIdx][0]]);
               T result = 0;
               T sum = 0;
 
               for(size_t i=0; i<3; ++i){
-                result+=baryCoords[i] * interpValues[ interpSphTri[triangleIdx][i] ]; //linear interpolation
+                result+=baryCoords[i] * interpRates[materialNum][ interpSphTri[triangleIdx][i] ]; //linear interpolation
                 sum += baryCoords[i];
               }
               result /= sum; //we divide by  b0 + b1 + b2  to ensure partition of unity property

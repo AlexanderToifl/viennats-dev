@@ -132,6 +132,8 @@ ENDIF(VTK_FOUND)
 #INCLUDE_DIRECTORIES("/usr/include/qt4/")
 
 
+INCLUDE_DIRECTORIES("/home/atoif/Libraries/delaunator-cpp/include")
+
 # Subdirectories
 ################
 #add_subdirectory(src)
