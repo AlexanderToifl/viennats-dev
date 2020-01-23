@@ -956,7 +956,7 @@ namespace my {
 
 
     //check if a point is on spherical triangle that is located on a unit sphere.
-    //The triangle is given by its vertices (cartesian coordinates).
+    //The triangle is given by its vertices (cartesian coordinates). Orientation of vertices has to be right-handed!
     template<class T>
     bool isOnSphericalTriangle(const lvlset::vec<T,3>& point,
                                const lvlset::vec<T,3>& vertex1,
@@ -1552,7 +1552,7 @@ namespace my {
               T sum = 0;
 
               for(size_t i=0; i<3; ++i){
-                result+=baryCoords[i] * interpRates[materialNum][ interpSphTri[triangleIdx][i] ]; //linear interpolation
+                result+=baryCoords[i] * interpRates[materialNum][ interpSphTri[triangleIdx][2-i] ]; //linear interpolation
                 sum += baryCoords[i];
               }
               result /= sum; //we divide by  b0 + b1 + b2  to ensure partition of unity property

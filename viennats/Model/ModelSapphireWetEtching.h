@@ -247,7 +247,6 @@
             int state = 0;
 
             for(std::size_t i=0; i < input.size(); ++i){
-                std::cout << "state " << state << ",character = " << input[i] << "\n";
                 
                 
                 if(state == 2)
@@ -255,12 +254,10 @@
                    std::vector<double> arr(EntryNum); 
                    for(std::size_t j = 0; j < EntryNum; ++j){
                         
-                        std::cout << "state " << state << ",character = " << input[i] << "\n";
                        auto commaPos = (j != EntryNum - 1) ? input.find(",",i) : input.find("}",i);
                        auto sub = input.substr(i,commaPos-i);
                        std::cout << sub << "\n";
                        double entry = std::stod(sub);
-                       std::cout << "entry = " << entry << "\n"; 
                        arr[j]=entry;
                        i = commaPos + 1;
                    }
