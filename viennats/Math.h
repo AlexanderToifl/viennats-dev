@@ -1058,140 +1058,53 @@ namespace my {
     }
 
 
-    //Trigonal symmetry for Sapphire
-    template <class T> class D3d {
-
-      private:
-         const lvlset::vec<T,3> c3_1{0,0,1}; //3 fold rotation
-         const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
-         const lvlset::vec<T,3> sigma1 = a1;
-
-
-         //NB. angle between a1 and sigma1 is 90 deg (ensured by constructor)
-
-         const T c3_1_angle = 2*math::Pi/3;
-
-         //INT_NUM + 1, due to [1,0,-1,0] and [1,-1,0,0] being equivalent.
-         //Both directions are required to describe the entire fundmental domain,
-         // but interpolation values have to be equal
-         std::vector<std::array<T,4>> interpPlanesHex;
-         const std::array<T,4> MM_plane{1,0,-1,0};//additional m direction 
-          
-//          { {
-//                                                                  {0,0,0,1},//c direction
-//                                                                  {1,-1,0,2},//r direction
-//                                                                  {1,-1,0,0},//m direction
-//                                                                  {1,-1,0,5},//Shen 1 direction
-//                                                                  {4,-5,1,38},//Shen 3 direction
-//                                                                  {1,-1,0,12},//Shen 4 direction
-//                                                                  {1,0,-1,5},//11 direction
-//                                                                  {1,-1,0,38},//O direction
-//                                                                  {1,1,-2,38},//V direction
-//                                                                  {1,0,-1,0}//additional m direction 
-//                                                                    } };
-//
-
-         std::vector<std::array<size_t,3>> interpSphTri;
-       //  { {
-       //                                                            {1, 2, 9},
-       //                                                            {2, 6, 9},
-       //                                                            {3, 6, 2},
-       //                                                            {3, 4, 6},
-       //                                                            {5, 4, 3},
-       //                                                            {6, 7, 0},
-       //                                                            {4, 7, 6},
-       //                                                            {5, 7, 4},
-       //                                                            {7, 8, 0},
-       //                                                            {8, 7, 5},
-       //                                                            } };
-         std::vector<std::array<T,4>> interpDirectionsHex;
-         std::vector<lvlset::vec<T,3>> interpVertices;
-         std::vector<std::vector<T>> interpRates; //rate vector for every material
-         
-         T basalAngle = 0; //angle between user defined a1 and a1{sqrt(3)*0.5, -0.5, 0}
-         T ca_ratio = 1; //ratio between lattice parameters c and a, this depends on the material
-
-
-         //sampling arrays
-         //plain velocity
-         using SamplingTable = std::vector<std::vector<T> >; 
-
-         std::vector<SamplingTable> vel_sampled;
-         std::vector<SamplingTable> vel100_sampled; //n + dN*ex
-         std::vector<SamplingTable> velm100_sampled; //n - dN*ex
-         std::vector<SamplingTable> vel010_sampled; //n + dN*ey
-         std::vector<SamplingTable> vel0m10_sampled; //n -dN*ey
-         std::vector<SamplingTable> vel001_sampled; //n +dN*ez
-         std::vector<SamplingTable> vel00m1_sampled; //n -dN*ez
-
-         const T phi_min = 0;
-         const T phi_max = 2*math::Pi;
-
-         const T u_min = -1;
-         const T u_max = 1;
-
-         size_t sampleM = 0;//default value
-         T du = 0;//default value
-         T dphi = 0;//default value
+    template<class T> class Symmetry{
+        public: 
         
-         const T CEPS = std::cbrt(std::numeric_limits<T>::epsilon());
-      public:
+            virtual void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates) = 0;
+            virtual lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const = 0;
+            virtual lvlset::vec<T,3> rotateToInternalCoordinateSystem(lvlset::vec<T,3> in) const = 0;
+            
+            
+            //void triangulateInterpVertices();
+            //void sampleRateFunctions(const size_t M);
+            //T interpolate(const lvlset::vec<T,3> in, const int materialNum) const;
+            //T interpolateSampled(const lvlset::vec<T,3> in, const int materialNum) const;
+            //T interpolateSLFSampled(const lvlset::vec<T,3> in, const int materialNum, const int ix, const int iy, const int iz) const;
+            //void timingTestSampling(const int N, const int matNum);
+        protected:
+            
+            std::vector<std::array<size_t,3>> interpSphTri;
+            std::vector<lvlset::vec<T,3>> interpVertices;
+            std::vector<std::vector<T>> interpRates; //rate vector for every material
+         
+            using SamplingTable = std::vector<std::vector<T> >; 
 
-          //in current status, defineCoordinateSystem HAS TO BE called in order to guanrantee meaningful state of object
-          D3d(){
-          }
+            std::vector<SamplingTable> vel_sampled;
+            std::vector<SamplingTable> vel100_sampled; //n + dN*ex
+            std::vector<SamplingTable> velm100_sampled; //n - dN*ex
+            std::vector<SamplingTable> vel010_sampled; //n + dN*ey
+            std::vector<SamplingTable> vel0m10_sampled; //n -dN*ey
+            std::vector<SamplingTable> vel001_sampled; //n +dN*ez
+            std::vector<SamplingTable> vel00m1_sampled; //n -dN*ez
 
-          //a ... normalized vector in c plane
-          //ca ... c/a lattice parameter ratio 
-          void defineCoordinateSystem(const lvlset::vec<T,3>&  a, const T ca ){
+            const T phi_min = 0;
+            const T phi_max = 2*math::Pi;
 
-              basalAngle = lvlset::SignedAngle(a, a1,c3_1);
-              ca_ratio = ca;
-              std::cout << "a (user specified system)= " << a << ", a1 (internal system)= " << a1 << ", c3_1 (internal system)= " << c3_1 << ", Basal angle = " << basalAngle << ", c/a = " << ca_ratio << "\n";
+            const T u_min = -1;
+            const T u_max = 1;
 
-              
-            }
+            size_t sampleM = 0;//default value
+            T du = 0;//default value
+            T dphi = 0;//default value
+           
+            const T CEPS = std::cbrt(std::numeric_limits<T>::epsilon());
 
-          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates){
-             
-             size_t mplane_index=planes.size()+1; 
-
-              for(size_t i = 0; i < planes.size(); ++i){
-                  if(planes[i] == std::vector<T>{1, -1, 0, 0})
-                      mplane_index=i;
-                      
-                  interpPlanesHex.push_back(std::array<T,4>{planes[i][0],planes[i][1],planes[i][2],planes[i][3]});
-              }
-
-              if(mplane_index > planes.size()){
-                  std::cout << "Error: M plane not given\n";
-                  exit(0);
-              }
-
-
-
-              interpPlanesHex.push_back(MM_plane);//M' plane is required
-
-              //TODO check for C and M plane
-
-              interpRates = rates;
-              for(size_t m=0; m < rates.size(); ++m){
-                  interpRates[m].push_back(rates[m][mplane_index]);
-              }
-
-
-              //Set interpolation vectors again with new coordinate system 
-              for(size_t i=0; i < interpPlanesHex.size() ; ++i){
-                  interpDirectionsHex.push_back( millerBravaisNormalVector(interpPlanesHex[i], ca_ratio));
-                  lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,ca_ratio * c3_1));
-                  interpVertices.push_back(reduceToFundmental(vec));
-              }
-
-              // std::cout << "Angle([1 -1 0 5], [0 0 0 1]) = Angle(" << interpVertices[4] << ", " << interpVertices[0] << ") = " << Angle(interpVertices[4], interpVertices[0]) << "\n";
-
-              //Triangulate interpVertices
+        public:
+            void triangulateInterpVertices(){
+              //Triangulate interpVertices by transforming the vertices on the sphere to the plane (Stereographic projection)
               //
-              //Stereographic projection
+              //Stereographic projection results in 2D cartesian vectors
               /* x0, y0, x1, y1, ... */
               std::vector<T> stereoPlaneVertices;
               
@@ -1207,7 +1120,7 @@ namespace my {
                   std::cout << s << "\n";
               }
               
-               //triangulation happens here
+               //Delaunay triangulation in Stereographic plane 
               delaunator::Delaunator d(stereoPlaneVertices);
               for(std::size_t i = 0; i < d.triangles.size(); i+=3) {
                           printf(
@@ -1235,15 +1148,13 @@ namespace my {
                   T area = 0.5*std::fabs( tx0*ty1 - tx0*ty2 - tx1*ty0 + tx1*ty2 + tx2*ty0 -tx2*ty1 ); 
                   std::cout << "area = " << area << "\n";
 
-                  if(area > 1e-6){
+                  if(area > 1e-6){//Delaunator sometimes calculates zero area triangles, ignore them
                       interpSphTri.push_back(std::array<size_t,3>{d.triangles[i],d.triangles[i+1], d.triangles[i+2]});
                   }
               }
 
               std::cout << "size interpSphTri = " << interpSphTri.size() << ", size interpVertices = " << interpVertices.size() << "\n";
-
               std::cout << "interpSphTri:\n";
-
               for(auto in : interpSphTri){
                   for(auto e : in){
                       std::cout << e << " ";
@@ -1251,18 +1162,9 @@ namespace my {
                   std::cout << "\n";
               }
               std::cout << "\n";
+            }
 
-              std::cout << "interpRates[0]:\n";
-              for(auto r : interpRates[0])
-                  std::cout << r << " ";
-
-              std::cout << "\n";
-
-
-          }
-
-          void sampleRateFunctions(const size_t M) {
-
+            void sampleRateFunctions(const size_t M) {
 
                 size_t mats(interpRates.size());
 
@@ -1312,23 +1214,13 @@ namespace my {
 
                             vel[i][j] = v;
                            
-                             
                             vel100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx+DN,ny,nz}), matNum);
-                                        
-
-                            
                             velm100[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx-DN,ny,nz}), matNum);
-    
-
                             vel010[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny+DN,nz}), matNum);
-                            
                             vel0m10[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny-DN,nz}), matNum);
-                            
                             vel001[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz+DN}), matNum);
-                            
                             vel00m1[i][j] =  interpolate(Normalize(lvlset::vec<T,3>{nx,ny,nz-DN}), matNum);
                         }
-
                     }
 
                   vel_sampled.push_back(vel); 
@@ -1340,8 +1232,6 @@ namespace my {
                   vel00m1_sampled.push_back(vel00m1);
 
                   std::cout << "Material #" << matNum << " done\n";
-                      
-
                 }
                 sampleM = M;
                 std::cout << "Finished D3d sampling\n";
@@ -1351,7 +1241,7 @@ namespace my {
                 std::cout << "Sampling took " << fp_ms.count() << " ms\n";
            
 
-
+                //Write interpolation function V(n) ('insect' plot)
                 int N = 100000;
                 std::default_random_engine generator;
                 generator.seed(std::chrono::system_clock::now().time_since_epoch().count());
@@ -1375,7 +1265,6 @@ namespace my {
                     interpolationResult[j] = interpolateSampled(nvec[j], 0);
                 }
                 
-
                 ofstream file("rateFunction.XYZ");
                 file << "nx,ny,nz,interpolationResult\n";
                 if(file.is_open()){
@@ -1386,9 +1275,99 @@ namespace my {
                 }
            }
  
+           T interpolateSampled(const lvlset::vec<T,3> in, const int materialNum) const {
+                T u = in[2];
+                T phi = atan2(in[1],in[0]);
+                if(phi < 0)
+                   phi += 2*math::Pi;  
+
+                int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
+                int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
+
+                return vel_sampled[materialNum][i][j];
+           }
+
+           T interpolateSLFSampled(const lvlset::vec<T,3> in, const int materialNum, const int ix, const int iy, const int iz) const {
+                lvlset::vec<T,3> in_norm = Normalize(in);
+                T u = in_norm[2];
+                T phi = atan2(in_norm[1],in_norm[0]);
+                if(phi < 0)
+                   phi += 2*math::Pi;  
+
+                int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
+                int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
+
+                if( ix == 1 && iy == 0 && iz == 0)
+                    return vel100_sampled[materialNum][i][j];
+                
+                if( ix == -1 && iy == 0 && iz == 0)
+                    return velm100_sampled[materialNum][i][j];
+
+                if( ix == 0 && iy == 1 && iz == 0)
+                    return vel010_sampled[materialNum][i][j];
+                
+                if( ix == 0 && iy == -1 && iz == 0)
+                    return vel0m10_sampled[materialNum][i][j];
+                
+                if( ix == 0 && iy == 0 && iz == 1)
+                    return vel001_sampled[materialNum][i][j];
+                
+                if( ix == 0 && iy == 0 && iz == -1)
+                    return vel00m1_sampled[materialNum][i][j];
+
+                std::cerr << "interpolateSLFSampled, invalid (ix, iy, iz) combination: " << ix << ", " << iy << ", " << iz << "\n";
+                exit(-1);
+                return 0;
+           }
+
+
+           //input vector is assumed to be normalized |v|=1
+           T interpolate(const lvlset::vec<T,3> in, const int materialNum) const{
+
+              lvlset::vec<T,3> in_fund = rotateToInternalCoordinateSystem(in);
+              in_fund = reduceToFundmental(in_fund);
+
+#if 0
+              if(dot(in_fund,lvlset::vec<T,3>{0,0,1})/Norm(in_fund)  > 0.993){
+                  return rC;
+              }
+
+#endif
+              bool triangleFound=false;
+              size_t triangleIdx = 0;
+
+              for( ; triangleIdx < interpSphTri.size(); ++triangleIdx){
+                if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
+                                                        interpVertices[interpSphTri[triangleIdx][1]],
+                                                        interpVertices[interpSphTri[triangleIdx][0]])){
+
+                    triangleFound=true;
+                    break;
+                }
+              }
+
+              if(!triangleFound){
+                std::cerr << "\nTriangle not found\n";
+                std::cerr << "Point (fundmental): " << in_fund << "\n";
+                exit(-1);
+              }
+
+              lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
+                                                                       interpVertices[interpSphTri[triangleIdx][1]],
+                                                                       interpVertices[interpSphTri[triangleIdx][0]]);
+              T result = 0;
+              T sum = 0;
+
+              for(size_t i=0; i<3; ++i){
+                result+=baryCoords[i] * interpRates[materialNum][ interpSphTri[triangleIdx][2-i] ]; //linear interpolation
+                sum += baryCoords[i];
+              }
+              result /= sum; //we divide by  b0 + b1 + b2  to ensure partition of unity property
+
+              return result;
+           }
         //test function to time the effect of sampling
-           void timingTestSampling(const int N, 
-                                  const int matNum){
+           void timingTestSampling(const int N, const int matNum){
                
                std::vector<lvlset::vec<T,3>> nvec(N);
                std::vector<T> interpolationResult(N);
@@ -1444,10 +1423,92 @@ namespace my {
                }
 
 
-           } 
+           }
+    };//class Symmetry
+
+    //Trigonal symmetry for Sapphire
+    template <class T> class D3d : public Symmetry<T> {
+
+      private:
+         const lvlset::vec<T,3> c3_1{0,0,1}; //3 fold rotation
+         const lvlset::vec<T,3> a1{sqrt(3)*0.5, -0.5, 0};
+         const lvlset::vec<T,3> sigma1 = a1;
+
+
+         //NB. angle between a1 and sigma1 is 90 deg (ensured by constructor)
+
+         const T c3_1_angle = 2*math::Pi/3;
+
+         std::vector<std::array<T,4>> interpPlanesHex;
+         const std::array<T,4> MM_plane{1,0,-1,0};//additional m direction 
+         std::vector<std::array<T,4>> interpDirectionsHex;
+
+         T basalAngle = 0; //angle between user defined a1 and a1{sqrt(3)*0.5, -0.5, 0}
+         T ca_ratio = 1; //ratio between lattice parameters c and a, this depends on the material
+
+        public:
+
+          //in current status, defineCoordinateSystem HAS TO BE called in order to guanrantee meaningful state of object
+          D3d(){
+          }
+
+          //a ... normalized vector in c plane
+          //ca ... c/a lattice parameter ratio 
+          void defineCoordinateSystem(const lvlset::vec<T,3>&  a, const T ca ){
+
+              basalAngle = lvlset::SignedAngle(a, a1,c3_1);
+              ca_ratio = ca;
+              std::cout << "a (user specified system)= " << a << ", a1 (internal system)= " << a1 << ", c3_1 (internal system)= " << c3_1 << ", Basal angle = " << basalAngle << ", c/a = " << ca_ratio << "\n";
+
+              
+            }
+
+          //Generate V(n) rate function based on crystal planes and the corresponding rates.
+          //The given planes are reduced to the fundamental domain and the fundamental domain is triangulated (Delaunay).
+          //planes has to include M and C plane, because C M M' define the boundary of the fundamental domain.
+          //M' refers to the equivalent plane w.r.t. M.
+          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates) override {
+             
+             size_t mplane_index=planes.size()+1; 
+
+              for(size_t i = 0; i < planes.size(); ++i){
+                  if(planes[i] == std::vector<T>{1, -1, 0, 0})
+                      mplane_index=i;
+                      
+                  interpPlanesHex.push_back(std::array<T,4>{planes[i][0],planes[i][1],planes[i][2],planes[i][3]});
+              }
+                
+              //Check for M' plane is required
+              //TODO check also for C plane 
+              if(mplane_index > planes.size()){
+                  std::cout << "Error: M plane not given\n";
+                  exit(0);
+              }
+              interpPlanesHex.push_back(MM_plane);
+
+              this->interpRates = rates;
+              for(size_t m=0; m < rates.size(); ++m){
+                  this->interpRates[m].push_back(rates[m][mplane_index]);
+              }
+
+
+              //Calculate normal vector of the planes given and convert them to the internal Cartesian coordinate system.
+              for(size_t i=0; i < interpPlanesHex.size() ; ++i){
+                  interpDirectionsHex.push_back( millerBravaisNormalVector(interpPlanesHex[i], ca_ratio));
+                  lvlset::vec<T,3> vec =  lvlset::Normalize(millerBravaisToCartesian(interpDirectionsHex[i],a1,ca_ratio * c3_1));
+                  this->interpVertices.push_back(reduceToFundmental(vec));
+              }
+
+              this->triangulateInterpVertices();
+          }
+
+            
+          lvlset::vec<T,3> rotateToInternalCoordinateSystem(lvlset::vec<T,3> in) const override {
+              return lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
+          }
           
           //reduce to fundamental domain, which is 0<theta<Pi/2, 0<phi<2*PI/3
-           lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const {
+           lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const override {
               lvlset::vec<T,3> out = in;
               lvlset::vec<T,3> out_sph = math::cartesianToSpherical(in);
 
@@ -1467,99 +1528,113 @@ namespace my {
 
               return out;
            }
+    };
+    
+    //Hextetrahedral symmetry for 3C-SiC
+    template <class T> class Td : public Symmetry<T> {
 
-           T interpolateSampled(const lvlset::vec<T,3> in, const int materialNum) const {
-                T u = in[2];
-                T phi = atan2(in[1],in[0]);
-                if(phi < 0)
-                   phi += 2*math::Pi;  
+      private:
+         const lvlset::vec<T,3> c2_0{1,0,0}; //2 fold rotation
+         const lvlset::vec<T,3> c3_0{1,1,1}; //3 fold rotation
 
-                int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
-                int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
+         const lvlset::vec<T,3> sigma_0{1,-1,0};
+         const lvlset::vec<T,3> sigma_1{-1,-1,0};
+         
+         const lvlset::vec<T,3> w1{0,0,1};
+         const lvlset::vec<T,3> w2 = lvlset::Normalize(lvlset::vec<T,3>{1,0,1});
+         const lvlset::vec<T,3> w3 = lvlset::Normalize(lvlset::vec<T,3>{1,1,0});
+         const lvlset::vec<T,3> w4 = lvlset::Normalize(lvlset::vec<T,3>{1,-1,0});
+         const lvlset::vec<T,3> w5 = lvlset::Normalize(lvlset::vec<T,3>{1,1,1});
+         const lvlset::vec<T,3> w6 = lvlset::Normalize(lvlset::vec<T,3>{1,-1,1});
 
-                return vel_sampled[materialNum][i][j];
+      public:
+
+          //in current status, defineCoordinateSystem HAS TO BE called in order to guanrantee meaningful state of object
+          Td(){
+          }
+
+          //TODO to be implemented
+          void defineCoordinateSystem(const lvlset::vec<T,3>&  a){
+            }
+
+          //Generate V(n) rate function based on crystal planes and the corresponding rates.
+          //The given planes are reduced to the fundamental domain and the fundamental domain is triangulated (Delaunay).
+          //planes has to include (1 1 1), (0 0 1), (1 0 1), and (1 -1 1) planes, because these define the boundary of the fundamental domain.
+          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates) override {
+             
+              for(size_t i = 0; i < planes.size(); ++i){
+                  lvlset::vec<T,3> vec{planes[i][0],planes[i][1],planes[i][2]};
+                  this->interpVertices.push_back(lvlset::Normalize(vec));
+
+              }
+                
+              this->interpRates = rates;
+              this->triangulateInterpVertices();
+          }
+
+          //TODO to be implemented 
+          lvlset::vec<T,3> rotateToInternalCoordinateSystem(lvlset::vec<T,3> in) const override {
+              return in;
+          }
+          
+          //reduce to fundamental domain, which is 0<theta<Pi/2, 0<phi<2*PI/3
+           lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const override {
+
+              if(isInFundamental(in))
+                  return in;
+
+              lvlset::vec<T,3> out = in;
+              lvlset::vec<T,3> out_sph = math::cartesianToSpherical(in);
+
+              //mirror operations
+              if( (3*math::Pi/4 < out_sph[2]) && (out_sph[2] < 7*math::Pi/4)){
+                  out = lvlset::ReflectionInPlane(out,sigma_1);
+                  out_sph = math::cartesianToSpherical(out);
+              }
+
+              if( (math::Pi/4 < out_sph[2]) && (out_sph[2] <= 3*math::Pi/4)){
+                  out = lvlset::ReflectionInPlane(out,sigma_0);
+              }
+
+              //now out is in quarter of sphere
+              
+              
+              if( out[2] < 0){
+                  out = lvlset::RotateAroundAxis(out,c2_0,math::Pi);
+              }
+            
+              if(isInFundamental(out))
+                  return out;
+
+              if(math::isOnSphericalTriangle(out,w5,w1,w3)){
+                  
+                  out = lvlset::RotateAroundAxis(out,c3_0,math::Pi/3);
+                  out = lvlset::RotateAroundAxis(out,c3_0,math::Pi/3);
+              }
+              else if(math::isOnSphericalTriangle(w1,w2,w6) || math::isOnSphericalTriangle(w1,w5,w2)){
+
+                  out = lvlset::RotateAroundAxis(out,c3_0,math::Pi/3);
+                  out = lvlset::ReflectionInPlane(out,sigma_0); 
+                  out = lvlset::RotateAroundAxis(out,c3_0,math::Pi/3);
+                  out = lvlset::RotateAroundAxis(out,c3_0,math::Pi/3);
+              }
+              else if(math::isOnSphericalTriangle(w1,w6,w4)){
+                  
+                  out = lvlset::RotateAroundAxis(out,c2_0,math::Pi);
+                  out = lvlset::RotateAroundAxis(out,c3_0,math::Pi/3);
+                  out = lvlset::RotateAroundAxis(out,c3_0,math::Pi/3);
+              }
+              else{
+                  std::cerr << "Td reduction to fundamental failed\nin = " << in << ", out (before last step) = " << out << "\n";
+                  exit(0);
+              } 
+
+              return out;
            }
 
-           T interpolateSLFSampled(const lvlset::vec<T,3> in, const int materialNum, const int ix, const int iy, const int iz) const {
-                lvlset::vec<T,3> in_norm = Normalize(in);
-                T u = in_norm[2];
-                T phi = atan2(in_norm[1],in_norm[0]);
-                if(phi < 0)
-                   phi += 2*math::Pi;  
-
-                int i = static_cast<int>( std::floor((phi-phi_min)/dphi + 0.5));
-                int j = static_cast<int>( std::floor((u-u_min)/du + 0.5));
-
-                if( ix == 1 && iy == 0 && iz == 0)
-                    return vel100_sampled[materialNum][i][j];
-                
-                if( ix == -1 && iy == 0 && iz == 0)
-                    return velm100_sampled[materialNum][i][j];
-
-                if( ix == 0 && iy == 1 && iz == 0)
-                    return vel010_sampled[materialNum][i][j];
-                
-                if( ix == 0 && iy == -1 && iz == 0)
-                    return vel0m10_sampled[materialNum][i][j];
-                
-                if( ix == 0 && iy == 0 && iz == 1)
-                    return vel001_sampled[materialNum][i][j];
-                
-                if( ix == 0 && iy == 0 && iz == -1)
-                    return vel00m1_sampled[materialNum][i][j];
-
-                std::cerr << "interpolateSLFSampled, invalid (ix, iy, iz) combination: " << ix << ", " << iy << ", " << iz << "\n";
-                exit(-1);
-                return 0;
-           }
-
-
-           //input vector is assumed to be normalized |v|=1
-           T interpolate(const lvlset::vec<T,3> in, const int materialNum) const{
-
-              lvlset::vec<T,3> in_fund  = lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
-              in_fund = reduceToFundmental(in_fund);
-
-#if 0
-              if(dot(in_fund,lvlset::vec<T,3>{0,0,1})/Norm(in_fund)  > 0.993){
-                  return rC;
-              }
-
-#endif
-              bool triangleFound=false;
-              size_t triangleIdx = 0;
-
-              for( ; triangleIdx < interpSphTri.size(); ++triangleIdx){
-                if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
-                                                        interpVertices[interpSphTri[triangleIdx][1]],
-                                                        interpVertices[interpSphTri[triangleIdx][0]])){
-
-                    triangleFound=true;
-                    break;
-                }
-              }
-
-              if(!triangleFound){
-                std::cerr << "\nTriangle not found\n";
-                std::cerr << "Point (fundmental): " << in_fund << "\n";
-                exit(-1);
-              }
-
-              lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
-                                                                       interpVertices[interpSphTri[triangleIdx][1]],
-                                                                       interpVertices[interpSphTri[triangleIdx][0]]);
-              T result = 0;
-              T sum = 0;
-
-              for(size_t i=0; i<3; ++i){
-                result+=baryCoords[i] * interpRates[materialNum][ interpSphTri[triangleIdx][2-i] ]; //linear interpolation
-                sum += baryCoords[i];
-              }
-              result /= sum; //we divide by  b0 + b1 + b2  to ensure partition of unity property
-
-              return result;
-           }
-
+         bool isInFundamental(lvlset::vec<T,3> in) const {
+              return (math::isOnSphericalTriangle(in, w5, w1, w2) ||math::isOnSphericalTriangle(w6,w2,w1) ); 
+         }
     };
   }
 }
