@@ -22,6 +22,9 @@
 //at for fourRateInterpolation()
 #include "LSlib/levelset.hpp"
 //#include <boost/static_assert.hpp>
+//
+#include <eigen3/Eigen/Dense>
+
 
 //delaunator
 #include <delaunator.hpp>
@@ -1333,38 +1336,46 @@ namespace my {
               }
 
 #endif
-              bool triangleFound=false;
-              size_t triangleIdx = 0;
 
-              for( ; triangleIdx < interpSphTri.size(); ++triangleIdx){
-                if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
-                                                        interpVertices[interpSphTri[triangleIdx][1]],
-                                                        interpVertices[interpSphTri[triangleIdx][0]])){
+              Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> m;
 
-                    triangleFound=true;
-                    break;
-                }
+              Eigen::Matrix<T,Eigen::Dynamic,1> r;
+              return 0;
+
+              if(false){//trilinear interpolation
+                  bool triangleFound=false;
+                  size_t triangleIdx = 0;
+
+                  for( ; triangleIdx < interpSphTri.size(); ++triangleIdx){
+                    if(math::isOnSphericalTriangle(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
+                                                            interpVertices[interpSphTri[triangleIdx][1]],
+                                                            interpVertices[interpSphTri[triangleIdx][0]])){
+
+                        triangleFound=true;
+                        break;
+                    }
+                  }
+
+                  if(!triangleFound){
+                    std::cerr << "\nTriangle not found\n";
+                    std::cerr << "Point (fundmental): " << in_fund << "\n";
+                    exit(-1);
+                  }
+
+                  lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
+                                                                           interpVertices[interpSphTri[triangleIdx][1]],
+                                                                           interpVertices[interpSphTri[triangleIdx][0]]);
+                  T result = 0;
+                  T sum = 0;
+
+                  for(size_t i=0; i<3; ++i){
+                    result+=baryCoords[i] * interpRates[materialNum][ interpSphTri[triangleIdx][2-i] ]; //linear interpolation
+                    sum += baryCoords[i];
+                  }
+                  result /= sum; //we divide by  b0 + b1 + b2  to ensure partition of unity property
+                 return result;
               }
 
-              if(!triangleFound){
-                std::cerr << "\nTriangle not found\n";
-                std::cerr << "Point (fundmental): " << in_fund << "\n";
-                exit(-1);
-              }
-
-              lvlset::vec<T,3> baryCoords = math::sphericalBarycentricCoords(in_fund, interpVertices[interpSphTri[triangleIdx][2]],
-                                                                       interpVertices[interpSphTri[triangleIdx][1]],
-                                                                       interpVertices[interpSphTri[triangleIdx][0]]);
-              T result = 0;
-              T sum = 0;
-
-              for(size_t i=0; i<3; ++i){
-                result+=baryCoords[i] * interpRates[materialNum][ interpSphTri[triangleIdx][2-i] ]; //linear interpolation
-                sum += baryCoords[i];
-              }
-              result /= sum; //we divide by  b0 + b1 + b2  to ensure partition of unity property
-
-              return result;
            }
         //test function to time the effect of sampling
            void timingTestSampling(const int N, const int matNum){

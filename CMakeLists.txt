@@ -125,7 +125,7 @@ ELSE(VTK_FOUND)
   message(STATUS "VTK not found.")
 ENDIF(VTK_FOUND)
 
-
+find_package(Eigen3 3.2 NO_MODULE)
 #qhull
 
 #INCLUDE_DIRECTORIES("/home/atoif/QHull/qhull-2019.1/src")
@@ -153,8 +153,9 @@ ADD_EXECUTABLE(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} src/v
 #FILE(GLOB SRCFILES /home/atoif/QHull/qhull-2019.1/src/libqhullcpp/*.cpp)
 #LINK_DIRECTORIES(/home/atoif/QHull/qhull-2019.1/build)
 
+
 IF(VIENNATS_STATIC_BUILD)
- TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES}  "-static" )# /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  "-static" )
+    TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES} Eigen3::Eigen "-static" )# /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  "-static" )
 ELSE()
- TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES})# /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a  /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  )
+ TARGET_LINK_LIBRARIES(viennats-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} ${LIBRARIES} ${Boost_LIBRARIES} ${VTK_LIBRARIES} )# /home/atoif/QHull/qhull-2019.1/build/libqhullcpp.a  /home/atoif/QHull/qhull-2019.1/build/libqhullstatic_r.a  )
 ENDIF(VIENNATS_STATIC_BUILD)

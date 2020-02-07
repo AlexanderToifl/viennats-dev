@@ -1,6 +1,4 @@
     /*
-     * ModelSapphireWetEtching.h
-     *
      *  Created on: 1/2020
      *      Author: atoifl
      */
@@ -23,7 +21,7 @@
 
     ///Anisotropic wet etching model for sapphire etching using H2SO4 : H3PO4
 
-        class SapphireWetEtching {
+        class 3C_SiCDeposition {
 
             const double EPS = 1e-6;
             const bool use_sampling=true;
@@ -41,7 +39,7 @@
             
             std::vector<bool> zeroVel;
 
-            my::symmetry::D3d<double> sapphireSymmetry;
+            my::symmetry::Td<double> 3CSiCSymmetry;
 
 
         public:
@@ -59,7 +57,7 @@
                 double Flux;
             };
 
-            SapphireWetEtching(const std::string & Parameters) {
+            3C_SiCDeposition(const std::string & Parameters) {
                 using namespace boost::spirit::classic;
                 using namespace parser_actors;
                 
@@ -107,14 +105,14 @@
                 }
 
 
-                sapphireSymmetry.defineCoordinateSystem(directionA,c/a);
-                sapphireSymmetry.defineRateFunction(planes,rates);
+                3CSiCSymmetry.defineCoordinateSystem(directionA,c/a);
+                3CSiCSymmetry.defineRateFunction(planes,rates);
                 
                 if(use_sampling){
-                  sapphireSymmetry.sampleRateFunctions(M);
+                  3CSiCSymmetry.sampleRateFunctions(M);
 
                     if(false)
-                        sapphireSymmetry.timingTestSampling(10000000, 0 );
+                        3CSiCSymmetry.timingTestSampling(10000000, 0 );
                 }
 
                 //reverse because material id is reversed w.r.t. layer id (for output)
@@ -167,9 +165,9 @@
 
             //Velocity using standard interpolation
             if(!use_sampling)
-                Velocity = -sapphireSymmetry.interpolate(nv,Material);
+                Velocity = -3CSiCSymmetry.interpolate(nv,Material);
             else
-                Velocity = -sapphireSymmetry.interpolateSampled(nv,Material);
+                Velocity = -3CSiCSymmetry.interpolateSampled(nv,Material);
         }
 
 		template<class VecType>
@@ -205,7 +203,7 @@
 #endif
             lvlset::vec<double,3> nv{NormalVector[0],NormalVector[1],NormalVector[2]};
 
-            Velocity = -sapphireSymmetry.interpolateSLFSampled(nv,Material,ix,iy,iz);
+            Velocity = -3CSiCSymmetry.interpolateSLFSampled(nv,Material,ix,iy,iz);
 
         }
 
@@ -276,7 +274,7 @@
 
     };
 
-//    const unsigned int SapphireWetEtching::NumberOfParticleClusters[ConstantRates::NumberOfParticleTypes]={};
+//    const unsigned int 3C_SiCDeposition::NumberOfParticleClusters[ConstantRates::NumberOfParticleTypes]={};
 
 }
 #endif /* MODEL3C_SIC_DEPOSITION_H__ */
