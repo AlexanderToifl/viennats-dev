@@ -722,6 +722,8 @@ if(1)
                 assert(new_lvlset.num_active_pts()==LevelSet.num_active_pts());
                 assert(new_lvlset.num_pts()==new_lvlset.num_active_pts());
                 LevelSet.swap(new_lvlset);
+              if(1)
+              std::cout << "dt=" << MaxTimeStep2 << "\n";
             }
             /*
                 This is where the magic happens
@@ -730,8 +732,6 @@ if(1)
             // iterator over all velocities in TempStopRates to apply them
             typename std::vector<std::pair<value_type, value_type> >::const_iterator itRS=TempRatesStops.begin();
             //for hausdorff script: following line must remain in line 733
-if(0)
-              std::cout << "dt=" << MaxTimeStep2 << "\n";
             // iterate over all points in the segmentation of new topmost levelset
             for (size_type local_pt_id=0;local_pt_id<LevelSet.num_pts(p);++local_pt_id) {
                 // phi is the LS value at the current grid point

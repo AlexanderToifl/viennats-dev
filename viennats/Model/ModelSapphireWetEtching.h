@@ -76,7 +76,7 @@
 
                 //if (!b) msg::print_error("Failed interpreting process parameters!");
 
-                //Parse planes= and rates= using a dirty handwritten parser
+                //Parse planes=, rates=, and weights= using a dirty handwritten parser
                 std::vector<std::vector<double>> planes;
                 const int EntryNum = 4;
                 std::string planeStr="planes=";
@@ -87,7 +87,6 @@
                     for(auto v : p){
                         std::cout << v << " ";
                     }
-
                     std::cout << "\n";
                 }
 
@@ -102,13 +101,24 @@
                     for(auto v : p){
                         std::cout << v << " ";
                     }
-
                     std::cout << "\n";
                 }
 
+                std::vector<std::vector<double>> weights;
+                int weightsEntryNum = planes.size();
+                std::string weightsStr="weights=";
+                parseListOfList(Parameters,weightsStr,weightsEntryNum,weights);
+                
+                std::cout << "Parsed weights:\n"; 
+                for(auto p : weights){
+                    for(auto v : p){
+                        std::cout << v << " ";
+                    }
+                    std::cout << "\n";
+                }
 
                 sapphireSymmetry.defineCoordinateSystem(directionA,c/a);
-                sapphireSymmetry.defineRateFunction(planes,rates);
+                sapphireSymmetry.defineRateFunction(planes,rates,weights);
                 
                 if(use_sampling){
                   sapphireSymmetry.sampleRateFunctions(M);

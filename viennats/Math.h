@@ -966,7 +966,7 @@ namespace my {
                                const lvlset::vec<T,3>& vertex2,
                                const lvlset::vec<T,3>& vertex3){
 
-          const T eps=1e-4;
+          const T eps=1e-6;
           T distances[3] = {0, 0, 0};
           const lvlset::vec<T,3> vertices[3] = {vertex1,vertex2, vertex3};
 
@@ -1064,7 +1064,7 @@ namespace my {
     template<class T> class Symmetry{
         public: 
         
-            virtual void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates) = 0;
+            virtual void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights) = 0;
             virtual lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const = 0;
             virtual lvlset::vec<T,3> rotateToInternalCoordinateSystem(lvlset::vec<T,3> in) const = 0;
             
@@ -1080,7 +1080,13 @@ namespace my {
             std::vector<std::array<size_t,3>> interpSphTri;
             std::vector<lvlset::vec<T,3>> interpVertices;
             std::vector<std::vector<T>> interpRates; //rate vector for every material
-         
+        
+            const bool isCosineInterp=true; 
+            const T cosInterpBasicvalue =1;
+            std::vector<Eigen::Matrix<T,Eigen::Dynamic,1>> cosIntpAlphas; //cosine interpolation magnitude coefficients (minima/maxima), one vector element per material
+            std::vector<Eigen::Matrix<T,Eigen::Dynamic,1>> cosIntpWeights;//cosine interpolation width coefficients
+
+            //--- SAMPLING variables
             using SamplingTable = std::vector<std::vector<T> >; 
 
             std::vector<SamplingTable> vel_sampled;
@@ -1268,7 +1274,7 @@ namespace my {
                     interpolationResult[j] = interpolateSampled(nvec[j], 0);
                 }
                 
-                ofstream file("rateFunction.XYZ");
+                ofstream file("rateFunction.csv");
                 file << "nx,ny,nz,interpolationResult\n";
                 if(file.is_open()){
                     for(int j(0); j < N; ++j){
@@ -1336,13 +1342,22 @@ namespace my {
               }
 
 #endif
+            
 
-              Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> m;
+              if(isCosineInterp){//cosine interpolation
+                  T result = cosInterpBasicvalue;
 
-              Eigen::Matrix<T,Eigen::Dynamic,1> r;
-              return 0;
+                  for(size_t i(0); i < interpVertices.size(); ++i){
+                      T dotproduct = dot(in_fund,interpVertices[i]);
 
-              if(false){//trilinear interpolation
+                      if(dotproduct > 0){
+                          result -= cosIntpAlphas[materialNum](i,0) * std::pow(dotproduct,cosIntpWeights[materialNum](i,0));
+                      }
+                  }
+
+                  return result;
+              }
+              else{//trilinear interpolation
                   bool triangleFound=false;
                   size_t triangleIdx = 0;
 
@@ -1478,7 +1493,7 @@ namespace my {
           //The given planes are reduced to the fundamental domain and the fundamental domain is triangulated (Delaunay).
           //planes has to include M and C plane, because C M M' define the boundary of the fundamental domain.
           //M' refers to the equivalent plane w.r.t. M.
-          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates) override {
+          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights) override {
              
              size_t mplane_index=planes.size()+1; 
 
@@ -1498,8 +1513,8 @@ namespace my {
               interpPlanesHex.push_back(MM_plane);
 
               this->interpRates = rates;
-              for(size_t m=0; m < rates.size(); ++m){
-                  this->interpRates[m].push_back(rates[m][mplane_index]);
+              for(size_t matNum=0; matNum < rates.size(); ++matNum){
+                  this->interpRates[matNum].push_back(rates[matNum][mplane_index]);
               }
 
 
@@ -1511,6 +1526,51 @@ namespace my {
               }
 
               this->triangulateInterpVertices();
+           
+              //cosine interpolation preparation 
+              size_t verticesNum(this->interpVertices.size());
+
+              for(size_t matNum=0; matNum < weights.size(); ++matNum){//iterate through materials
+
+                  Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> m(verticesNum,verticesNum);
+                  m.Zero(verticesNum,verticesNum);
+                 
+                  Eigen::Matrix<T,Eigen::Dynamic,1> r(verticesNum,1);
+                  Eigen::Matrix<T,Eigen::Dynamic,1> w(verticesNum,1);
+
+                 
+
+                  for(size_t s(0); s < weights[matNum].size(); ++s){ //iterate through elements of weights for one material
+                      w(s,0) = weights[matNum][s];
+                  }
+                  w(verticesNum-1,0)=weights[matNum][mplane_index];
+
+                  for(size_t i(0); i < verticesNum; ++i){
+                      for(size_t j(0); j < verticesNum; ++j){
+                          T dotproduct = dot(this->interpVertices[i],this->interpVertices[j]);
+                          if(dotproduct > 0)
+                              m(i,j) = std::pow(dotproduct,w(j,0));
+                      }
+                  }
+ 
+                  for(size_t i(0); i < weights[matNum].size(); ++i){                
+                      r(i,0) = this->cosInterpBasicvalue - this->interpRates[matNum][i];
+                  }
+                  r(verticesNum-1,0) = this->cosInterpBasicvalue - this->interpRates[matNum][mplane_index];
+
+                  std::cout << m << "\n";
+                  std::cout << r << "\n";
+
+                  Eigen::Matrix<T,Eigen::Dynamic,1> alpha = m.fullPivLu().solve(r);
+
+                  std::cout << "alpha = \n" << alpha <<"\n";
+          
+                  
+
+                  this->cosIntpAlphas.push_back(alpha);
+                  this->cosIntpWeights.push_back(w);
+              }
+
           }
 
             
@@ -1571,14 +1631,14 @@ namespace my {
           //Generate V(n) rate function based on crystal planes and the corresponding rates.
           //The given planes are reduced to the fundamental domain and the fundamental domain is triangulated (Delaunay).
           //planes has to include (1 1 1), (0 0 1), (1 0 1), and (1 -1 1) planes, because these define the boundary of the fundamental domain.
-          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates) override {
+          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights) override {
              
               for(size_t i = 0; i < planes.size(); ++i){
                   lvlset::vec<T,3> vec{planes[i][0],planes[i][1],planes[i][2]};
                   this->interpVertices.push_back(lvlset::Normalize(vec));
 
               }
-                
+              //dismiss weights atm for Td  
               this->interpRates = rates;
               this->triangulateInterpVertices();
           }
