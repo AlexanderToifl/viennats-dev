@@ -35,6 +35,7 @@
             
             lvlset::vec<double,3> directionA;
             lvlset::vec<double,3> directionC;
+            std::vector<double> cosInterpRate0;
 
             std::vector<std::vector<double>> planes; //planes given by experiment
             std::vector<std::vector<double>> rates; //one vector per material number, stores rates for planes given by experiment
@@ -70,7 +71,8 @@
                         Parameters.end(),
                         *(
                               (str_p("directionA")  >> '='  >> '{' >> real_p[assign_a(directionA[0])]  >> "," >> real_p[assign_a(directionA[1])] >> "," >> real_p[assign_a(directionA[2])] >> '}' >> ';') |
-                              (str_p("directionC")  >> '='  >> '{' >> real_p[assign_a(directionC[0])]  >> "," >> real_p[assign_a(directionC[1])] >> "," >> real_p[assign_a(directionC[2])] >> '}' >> ';') 
+                              (str_p("directionC")  >> '='  >> '{' >> real_p[assign_a(directionC[0])]  >> "," >> real_p[assign_a(directionC[1])] >> "," >> real_p[assign_a(directionC[2])] >> '}' >> ';') |
+                              (str_p("cosInterpRate0")  >>  '='  >>  '{' >> ( real_p[push_back_a(cosInterpRate0)]  % ',')>> '}'  >> ';') 
                         ),
                         space_p | comment_p("//") | comment_p("/*", "*/")).full;
 
@@ -118,7 +120,7 @@
                 }
 
                 sapphireSymmetry.defineCoordinateSystem(directionA,c/a);
-                sapphireSymmetry.defineRateFunction(planes,rates,weights);
+                sapphireSymmetry.defineRateFunction(planes,rates,weights,cosInterpRate0);
                 
                 if(use_sampling){
                   sapphireSymmetry.sampleRateFunctions(M);

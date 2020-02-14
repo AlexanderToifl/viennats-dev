@@ -1064,7 +1064,7 @@ namespace my {
     template<class T> class Symmetry{
         public: 
         
-            virtual void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights) = 0;
+            virtual void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights, const std::vector<T> rate0) = 0;
             virtual lvlset::vec<T,3> reduceToFundmental(lvlset::vec<T,3> in) const = 0;
             virtual lvlset::vec<T,3> rotateToInternalCoordinateSystem(lvlset::vec<T,3> in) const = 0;
             
@@ -1082,7 +1082,7 @@ namespace my {
             std::vector<std::vector<T>> interpRates; //rate vector for every material
         
             const bool isCosineInterp=true; 
-            const T cosInterpBasicvalue =1;
+            T cosInterpBasicvalue =1.0;
             std::vector<Eigen::Matrix<T,Eigen::Dynamic,1>> cosIntpAlphas; //cosine interpolation magnitude coefficients (minima/maxima), one vector element per material
             std::vector<Eigen::Matrix<T,Eigen::Dynamic,1>> cosIntpWeights;//cosine interpolation width coefficients
 
@@ -1207,6 +1207,17 @@ namespace my {
                     SamplingTable vel00m1(M+1);
                     for(auto& v : vel00m1) v.resize(M+1);
 
+#if 1 
+                    std::cout << "rC = " << interpolate(Normalize(lvlset::vec<T,3>{0,0,1}), matNum) << "\n";
+                    std::cout << "rC + noise = " << interpolate(Normalize(lvlset::vec<T,3>{0,0.01,1}), matNum) << "\n";
+                    std::cout << "rC + noise = " << interpolate(Normalize(lvlset::vec<T,3>{0.01,0.01,1}), matNum) << "\n";
+                    std::cout << "rC + noise = " << interpolate(Normalize(lvlset::vec<T,3>{0.01,-0.01,1}), matNum) << "\n";
+                    std::cout << "rM = @ " << interpolate(Normalize(lvlset::vec<T,3>{0.5,0.46,0.8472}), matNum) << "\n";
+                    std::cout << "rS1 = @ " << interpolate(Normalize(lvlset::vec<T,3>{0.2656051362909124, 0.46004159080711665, 0.8472400169394404}), matNum) << "\n";
+                    //exit(0);
+
+
+#endif
 
                     for(size_t i=0; i <= M; ++i){                   
                         T phi = phi_min + i*dphi;
@@ -1336,23 +1347,24 @@ namespace my {
               lvlset::vec<T,3> in_fund = rotateToInternalCoordinateSystem(in);
               in_fund = reduceToFundmental(in_fund);
 
-#if 0
-              if(dot(in_fund,lvlset::vec<T,3>{0,0,1})/Norm(in_fund)  > 0.993){
-                  return rC;
-              }
-
-#endif
             
 
               if(isCosineInterp){//cosine interpolation
                   T result = cosInterpBasicvalue;
+                  //T result = 0.0;
 
                   for(size_t i(0); i < interpVertices.size(); ++i){
                       T dotproduct = dot(in_fund,interpVertices[i]);
 
                       if(dotproduct > 0){
-                          result -= cosIntpAlphas[materialNum](i,0) * std::pow(dotproduct,cosIntpWeights[materialNum](i,0));
+                          //result -= cosIntpAlphas[materialNum](i,0) * std::pow(dotproduct,cosIntpWeights[materialNum](i,0));
+                          result += cosIntpAlphas[materialNum](i,0) * std::pow(dotproduct,cosIntpWeights[materialNum](i,0));
                       }
+                  }
+
+                  if(result < 0){
+                      std::cout << "Error while cosine interpolation: input vector " << in << " results in " << result << "\n";
+                      exit(0);
                   }
 
                   return result;
@@ -1493,7 +1505,7 @@ namespace my {
           //The given planes are reduced to the fundamental domain and the fundamental domain is triangulated (Delaunay).
           //planes has to include M and C plane, because C M M' define the boundary of the fundamental domain.
           //M' refers to the equivalent plane w.r.t. M.
-          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights) override {
+          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights, const std::vector<T> rate0) override {
              
              size_t mplane_index=planes.size()+1; 
 
@@ -1526,11 +1538,17 @@ namespace my {
               }
 
               this->triangulateInterpVertices();
-           
+          
+              //for(auto& v : rate0)
+              //  std::cout << v << "\n"; 
+              
+               
               //cosine interpolation preparation 
               size_t verticesNum(this->interpVertices.size());
 
               for(size_t matNum=0; matNum < weights.size(); ++matNum){//iterate through materials
+
+                  this->cosInterpBasicvalue = rate0[matNum];
 
                   Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> m(verticesNum,verticesNum);
                   m.Zero(verticesNum,verticesNum);
@@ -1554,9 +1572,11 @@ namespace my {
                   }
  
                   for(size_t i(0); i < weights[matNum].size(); ++i){                
-                      r(i,0) = this->cosInterpBasicvalue - this->interpRates[matNum][i];
+                     // r(i,0) = this->cosInterpBasicvalue - this->interpRates[matNum][i];
+                      r(i,0) =  this->interpRates[matNum][i] - this->cosInterpBasicvalue;
                   }
-                  r(verticesNum-1,0) = this->cosInterpBasicvalue - this->interpRates[matNum][mplane_index];
+                  //r(verticesNum-1,0) = this->cosInterpBasicvalue - this->interpRates[matNum][mplane_index];
+                  r(verticesNum-1,0) = this->interpRates[matNum][mplane_index] - this->cosInterpBasicvalue;
 
                   std::cout << m << "\n";
                   std::cout << r << "\n";
@@ -1575,6 +1595,7 @@ namespace my {
 
             
           lvlset::vec<T,3> rotateToInternalCoordinateSystem(lvlset::vec<T,3> in) const override {
+              //return lvlset::RotateAroundAxis(in, c3_1, 0.0);
               return lvlset::RotateAroundAxis(in, c3_1, -basalAngle);
           }
           
@@ -1631,7 +1652,7 @@ namespace my {
           //Generate V(n) rate function based on crystal planes and the corresponding rates.
           //The given planes are reduced to the fundamental domain and the fundamental domain is triangulated (Delaunay).
           //planes has to include (1 1 1), (0 0 1), (1 0 1), and (1 -1 1) planes, because these define the boundary of the fundamental domain.
-          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights) override {
+          void defineRateFunction(const std::vector<std::vector<T>>& planes, const std::vector<std::vector<T>>& rates, const std::vector<std::vector<T>>& weights,const std::vector<T> rate0) override {
              
               for(size_t i = 0; i < planes.size(); ++i){
                   lvlset::vec<T,3> vec{planes[i][0],planes[i][1],planes[i][2]};
