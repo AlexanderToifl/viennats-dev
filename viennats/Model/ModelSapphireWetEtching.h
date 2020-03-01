@@ -27,7 +27,7 @@
 
             const double EPS = 1e-6;
             const bool use_sampling=true;
-            const long M = 200; //samples in phi and cos(theta)
+            const long M = 400; //samples in phi and cos(theta)
 
             //Sapphire lattice parameters
             const double a = 4.785;//Angstrom

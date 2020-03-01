@@ -1214,6 +1214,7 @@ namespace my {
                     std::cout << "rC + noise = " << interpolate(Normalize(lvlset::vec<T,3>{0.01,-0.01,1}), matNum) << "\n";
                     std::cout << "rM = @ " << interpolate(Normalize(lvlset::vec<T,3>{0.5,0.46,0.8472}), matNum) << "\n";
                     std::cout << "rS1 = @ " << interpolate(Normalize(lvlset::vec<T,3>{0.2656051362909124, 0.46004159080711665, 0.8472400169394404}), matNum) << "\n";
+                    std::cout << "rS3 = @ " << interpolate(Normalize(lvlset::vec<T,3>{0.2315, 0.2673, 0.9353}), matNum) << "\n";
                     //exit(0);
 
 
@@ -1343,8 +1344,8 @@ namespace my {
 
            //input vector is assumed to be normalized |v|=1
            T interpolate(const lvlset::vec<T,3> in, const int materialNum) const{
-
-              lvlset::vec<T,3> in_fund = rotateToInternalCoordinateSystem(in);
+             //  lvlset::vec<T,3> in_fund = in; 
+             lvlset::vec<T,3> in_fund = rotateToInternalCoordinateSystem(in); //TODO UNCOMMENT
               in_fund = reduceToFundmental(in_fund);
 
             
@@ -1551,7 +1552,7 @@ namespace my {
                   this->cosInterpBasicvalue = rate0[matNum];
 
                   Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> m(verticesNum,verticesNum);
-                  m.Zero(verticesNum,verticesNum);
+                  m.Zero(verticesNum,verticesNum);//Seems not to be working....
                  
                   Eigen::Matrix<T,Eigen::Dynamic,1> r(verticesNum,1);
                   Eigen::Matrix<T,Eigen::Dynamic,1> w(verticesNum,1);
@@ -1568,6 +1569,9 @@ namespace my {
                           T dotproduct = dot(this->interpVertices[i],this->interpVertices[j]);
                           if(dotproduct > 0)
                               m(i,j) = std::pow(dotproduct,w(j,0));
+                          else
+                              m(i,j) = 0;
+                          std::cout << "(" << i << "," << j << "): vertex1=" << this->interpVertices[i] << ", vertex2=" << this->interpVertices[j] << ", dotproduct=" << dotproduct << ", wj=" << w(j,0) << ", m(i,j)="<< m(i,j)<< "\n";
                       }
                   }
  
