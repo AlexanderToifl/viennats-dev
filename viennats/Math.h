@@ -1587,6 +1587,7 @@ namespace my {
 
                   Eigen::Matrix<T,Eigen::Dynamic,1> alpha = m.fullPivLu().solve(r);
 
+                  std::cout << "t(x) = " << this->cosInterpBasicvalue << " + " << alpha(2,0) << " f(x+6.0)^" << w(2,0) << " + " << alpha(3,0) << " f(x)^"<< w(3,0) <<  " + " << alpha(4,0) << " f(x-12.3)^" << w(4,0) <<  "+ " << alpha(6,0) << " f(x-27.4)^"<< w(6,0) << " + " << alpha(5,0) << " f(x-17.4)^" << w(5,0) << " + " << alpha(0,0) << " f(x-32.1)^" << w(0,0) << "\n";
                   std::cout << "alpha = \n" << alpha <<"\n";
           
                   
